@@ -1,0 +1,28 @@
+.form-cambio-estado {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-cambio-estado__texto {
+  margin: 0;
+  color: var(--texto-2);
+  font-size: 13px;
+}
+
+.form-cambio-estado label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.form-cambio-estado textarea {
+  resize: vertical;
+}
+
+.form-cambio-estado__error {
+  margin: 0;
+  color: var(--error);
+  font-size: 13px;
+}

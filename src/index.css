@@ -1,0 +1,156 @@
+
+:root {
+  --fondo: #0f172a;
+  --panel: #1e293b;
+  --panel-2: #273449;
+  --primario: #38bdf8;
+  --texto: #e2e8f0;
+  --texto-2: #94a3b8;
+  --borde: rgba(148, 163, 184, 0.2);
+  --error: #f87171;
+  --exito: #4ade80;
+  --aviso: #fbbf24;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--texto);
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--texto-2);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--primario);
+  outline-offset: 1px;
+}
+
+/* --- Botones compartidos (los usa cada módulo) --- */
+
+.boton-primario {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primario);
+  color: var(--fondo);
+  font-weight: 600;
+}
+
+.boton-primario:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.boton-secundario {
+  padding: 9px 16px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: none;
+  color: var(--texto);
+}
+
+.boton-secundario:hover {
+  border-color: var(--primario);
+}
+
+.boton-peligro {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--error);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* --- Barra de listados (buscador + botón de alta) --- */
+
+.listado-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* --- Grilla de tarjetas (clientes / equipos / órdenes) --- */
+
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+/* --- Aviso de error con datos ya cargados --- */
+
+.aviso-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--error);
+  font-size: 13px;
+}
+
+/* --- Estados de listado (cargando / error / vacío) --- */
+
+.estado {
+  color: var(--texto-2);
+  padding: 32px 0;
+  text-align: center;
+}
+
+.estado--error {
+  color: var(--error);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+/* --- Acciones al pie de un modal --- */
+
+.modal-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.modal-error {
+  margin: 12px 0 0;
+  color: var(--error);
+  font-size: 13px;
+}

@@ -1,0 +1,13 @@
+.buscador {
+  width: 100%;
+  max-width: 360px;
+  padding: 9px 12px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  color: var(--texto);
+}
+
+.buscador::placeholder {
+  color: var(--texto-2);
+}
