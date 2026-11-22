@@ -2,3 +2,6 @@ node_modules
 dist
 *.local
 .env
+
+# Artefactos de las pruebas de navegador (Playwright MCP)
+.playwright-mcp/
