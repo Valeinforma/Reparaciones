@@ -13,7 +13,7 @@ export type EstadoOrden =
 
 export type FiltroEstado = EstadoOrden | "Todos";
 
-// Flujo normal (sin Cancelado) — lo dibuja el stepper
+
 export const FLUJO_ESTADOS: EstadoOrden[] = [
   "Recibido",
   "EnDiagnostico",
@@ -33,7 +33,7 @@ export const ETIQUETAS_ESTADO: Record<EstadoOrden, string> = {
   Cancelado: "Cancelado",
 };
 
-// Espejo de las transiciones que valida el backend (él revalida)
+
 export const TRANSICIONES: Record<EstadoOrden, EstadoOrden[]> = {
   Recibido: ["EnDiagnostico", "Cancelado"],
   EnDiagnostico: ["Presupuestado", "Cancelado"],

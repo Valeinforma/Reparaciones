@@ -1,13 +1,3 @@
-# ============================================================
-# render.yaml — Reparaciones (Static Site, plan Free)
-# ------------------------------------------------------------
-# El navegador llama rutas relativas (/api/...). Render reenvía
-# /api/* al backend TechFix publicado, con método, headers y body,
-# así que no hace falta CORS ni tocar el código React.
-#
-# El orden de las rutas importa: /api/* primero; si no, el
-# fallback de la SPA (/* -> /index.html) se come las llamadas API.
-# ============================================================
 
 services:
   - type: web

@@ -1,10 +1,3 @@
-// ============================================================
-// src/Components/EquipoContext/EquipoContext.tsx
-// ------------------------------------------------------------
-// Contexto + Provider en el mismo archivo (patrón ToDoApp).
-// AppEquipos lo anida dentro de ClienteProvider para que el
-// formulario pueda listar los clientes en un <select>.
-// ============================================================
 
 import React from "react";
 import useEquiposApi from "../../Hooks/useEquiposApi";
@@ -32,3 +25,4 @@ export function useEquipoContext(): EquipoContextType {
 
   return context;
 }
+  
