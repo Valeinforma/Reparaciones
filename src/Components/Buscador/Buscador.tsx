@@ -1,4 +1,4 @@
-import "./Buscador.css";
+import TextField from "@mui/material/TextField";
 
 interface BuscadorProps {
   valor: string;
@@ -12,12 +12,13 @@ export default function Buscador({
   placeholder,
 }: BuscadorProps) {
   return (
-    <input
-      className="buscador"
+    <TextField
+      size="small"
       type="search"
       placeholder={placeholder}
       value={valor}
       onChange={(e) => onCambio(e.target.value)}
+      sx={{ flex: 1, minWidth: 240, maxWidth: 460 }}
     />
   );
 }

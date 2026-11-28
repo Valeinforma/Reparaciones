@@ -1,8 +1,12 @@
 import { useState } from "react";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import Modal from "../Modal/Modal";
 import { useClienteContext } from "../ClienteContext/ClienteContext";
 import type ICliente from "../../Interfaces/ICliente";
-import "./AgregarEditarCliente.css";
+import { avisoExito } from "../../utils/dialogos";
 
 interface AgregarEditarClienteProps {
   inicial: ICliente | null; // null = alta
@@ -53,8 +57,10 @@ export default function AgregarEditarCliente({
     try {
       if (inicial) {
         await editarCliente(inicial.id, datos);
+        avisoExito("Cliente actualizado");
       } else {
         await agregarCliente(datos);
+        avisoExito("Cliente creado");
       }
       onCerrar();
     } catch (err: unknown) {
@@ -68,73 +74,68 @@ export default function AgregarEditarCliente({
       titulo={inicial ? "Editar cliente" : "Nuevo cliente"}
       onCerrar={onCerrar}
     >
-      <form className="form-cliente" onSubmit={alGuardar}>
-        <div className="form-cliente__fila">
-          <label>
-            Nombre *
-            <input
+      <form onSubmit={alGuardar}>
+        <Stack spacing={2}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              fullWidth
+              label="Nombre *"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               autoFocus
             />
-          </label>
-
-          <label>
-            Apellido *
-            <input
+            <TextField
+              fullWidth
+              label="Apellido *"
               value={apellido}
               onChange={(e) => setApellido(e.target.value)}
             />
-          </label>
-        </div>
+          </Stack>
 
-        <label>
-          Teléfono
-          <input
+          <TextField
+            fullWidth
+            label="Teléfono"
+            placeholder="11 5555-5555"
             value={telefono}
             onChange={(e) => setTelefono(e.target.value)}
-            placeholder="11 5555-5555"
           />
-        </label>
 
-        <label>
-          Email
-          <input
+          <TextField
+            fullWidth
+            label="Email"
             type="email"
+            placeholder="cliente@correo.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="cliente@correo.com"
           />
-        </label>
 
-        <label>
-          Dirección
-          <input
+          <TextField
+            fullWidth
+            label="Dirección"
+            placeholder="Calle y número"
             value={direccion}
             onChange={(e) => setDireccion(e.target.value)}
-            placeholder="Calle y número"
           />
-        </label>
 
-        {error && <p className="form-cliente__error">{error}</p>}
+          {error && <Alert severity="error">{error}</Alert>}
 
-        <div className="modal-acciones">
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={onCerrar}
-            disabled={guardando}
-          >
-            Cancelar
-          </button>
-          <button type="submit" className="boton-primario" disabled={guardando}>
-            {guardando
-              ? "Guardando…"
-              : inicial
-                ? "Guardar cambios"
-                : "Crear cliente"}
-          </button>
-        </div>
+          <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+            <Button
+              variant="outlined"
+              onClick={onCerrar}
+              disabled={guardando}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" disabled={guardando}>
+              {guardando
+                ? "Guardando…"
+                : inicial
+                  ? "Guardar cambios"
+                  : "Crear cliente"}
+            </Button>
+          </Stack>
+        </Stack>
       </form>
     </Modal>
   );

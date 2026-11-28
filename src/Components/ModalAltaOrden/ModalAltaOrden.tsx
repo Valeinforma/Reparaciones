@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import Modal from "../Modal/Modal";
 import { useOrdenContext } from "../OrdenContext/OrdenContext";
 import { useClienteContext } from "../ClienteContext/ClienteContext";
@@ -9,12 +14,11 @@ import {
   describirEquipo,
   type IOrdenInput,
 } from "../../Hooks/useOrdenesApi";
-import "./ModalAltaOrden.css";
+import { avisoExito } from "../../utils/dialogos";
 
 interface ModalAltaOrdenProps {
   onCerrar: () => void;
 }
-
 
 export default function ModalAltaOrden({ onCerrar }: ModalAltaOrdenProps) {
   const { agregarOrden } = useOrdenContext();
@@ -34,7 +38,6 @@ export default function ModalAltaOrden({ onCerrar }: ModalAltaOrdenProps) {
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
 
   useEffect(() => {
     setEquipoId(0);
@@ -112,6 +115,7 @@ export default function ModalAltaOrden({ onCerrar }: ModalAltaOrdenProps) {
 
     try {
       const nueva = await agregarOrden(datos);
+      avisoExito("Orden creada");
       onCerrar();
 
       // Directo al detalle de la orden recién creada
@@ -124,101 +128,102 @@ export default function ModalAltaOrden({ onCerrar }: ModalAltaOrdenProps) {
 
   return (
     <Modal titulo="Nueva orden de servicio" onCerrar={onCerrar} ancho="ancho">
-      <form className="form-orden" onSubmit={alGuardar}>
-        <div className="form-orden__fila">
-          <label>
-            Cliente *
-            <select
+      <form onSubmit={alGuardar}>
+        <Stack spacing={2}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              select
+              fullWidth
+              label="Cliente *"
               value={clienteId}
               onChange={(e) => setClienteId(Number(e.target.value))}
               autoFocus
             >
-              <option value={0}>Seleccioná un cliente…</option>
+              <MenuItem value={0}>Seleccioná un cliente…</MenuItem>
               {clientes.map((cliente) => (
-                <option key={cliente.id} value={cliente.id}>
+                <MenuItem key={cliente.id} value={cliente.id}>
                   {cliente.nombre} {cliente.apellido}
-                </option>
+                </MenuItem>
               ))}
-            </select>
-          </label>
+            </TextField>
 
-          <label>
-            Equipo *
-            <select
+            <TextField
+              select
+              fullWidth
+              label="Equipo *"
               value={equipoId}
               onChange={(e) => setEquipoId(Number(e.target.value))}
               disabled={!clienteId || cargandoEquipos}
             >
-              <option value={0}>
+              <MenuItem value={0}>
                 {!clienteId
                   ? "Elegí primero un cliente"
                   : cargandoEquipos
                     ? "Cargando equipos…"
                     : "Seleccioná un equipo…"}
-              </option>
+              </MenuItem>
               {equipos?.map((equipo) => (
-                <option key={equipo.id} value={equipo.id}>
+                <MenuItem key={equipo.id} value={equipo.id}>
                   {describirEquipo(equipo.tipo, equipo.marca, equipo.modelo)}
                   {equipo.numeroSerie ? ` · S/N ${equipo.numeroSerie}` : ""}
-                </option>
+                </MenuItem>
               ))}
-            </select>
-          </label>
-        </div>
+            </TextField>
+          </Stack>
 
-        {errorEquipos && <p className="form-orden__error">{errorEquipos}</p>}
+          {errorEquipos && <Alert severity="error">{errorEquipos}</Alert>}
 
-        {clienteId > 0 && !cargandoEquipos && equipos?.length === 0 && (
-          <p className="form-orden__aviso">
-            Este cliente no tiene equipos cargados. Crea el equipo desde la
-            seccion Equipos y volve a intentar.
-          </p>
-        )}
+          {clienteId > 0 && !cargandoEquipos && equipos?.length === 0 && (
+            <Alert severity="warning">
+              Este cliente no tiene equipos cargados. Creá el equipo desde la
+              sección Equipos y volvé a intentar.
+            </Alert>
+          )}
 
-        <label>
-          Fecha estimada de entrega
-          <input
+          <TextField
+            fullWidth
             type="date"
+            label="Fecha estimada de entrega"
             value={fechaEstimada}
             onChange={(e) => setFechaEstimada(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
-        </label>
 
-        <label>
-          Problema reportado
-          <textarea
+          <TextField
+            fullWidth
+            multiline
             rows={3}
+            label="Problema reportado"
+            placeholder="Qué informa el cliente: falla, ruidos, no enciende…"
             value={problemaReportado}
             onChange={(e) => setProblemaReportado(e.target.value)}
-            placeholder="Qué informa el cliente: falla, ruidos, no enciende…"
           />
-        </label>
 
-        <label>
-          Observaciones
-          <textarea
+          <TextField
+            fullWidth
+            multiline
             rows={2}
+            label="Observaciones"
+            placeholder="Accesorios recibidos, estado estético, etc."
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
-            placeholder="Accesorios recibidos, estado estético, etc."
           />
-        </label>
 
-        {error && <p className="form-orden__error">{error}</p>}
+          {error && <Alert severity="error">{error}</Alert>}
 
-        <div className="modal-acciones">
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={onCerrar}
-            disabled={guardando}
-          >
-            Cancelar
-          </button>
-          <button type="submit" className="boton-primario" disabled={guardando}>
-            {guardando ? "Creando.." : "Crear orden"}
-          </button>
-        </div>
+          <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+            <Button
+              variant="outlined"
+              onClick={onCerrar}
+              disabled={guardando}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" disabled={guardando}>
+              {guardando ? "Creando…" : "Crear orden"}
+            </Button>
+          </Stack>
+        </Stack>
       </form>
     </Modal>
   );

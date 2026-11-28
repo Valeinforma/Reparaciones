@@ -1,12 +1,16 @@
 import { useMemo } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { useOrdenContext } from "../OrdenContext/OrdenContext";
 import type { EstadoOrden } from "../../Hooks/useOrdenesApi";
 import Buscador from "../Buscador/Buscador";
 import ChipsEstado from "../ChipsEstado/ChipsEstado";
 import Orden from "../Orden/Orden";
 import ModalAltaOrden from "../ModalAltaOrden/ModalAltaOrden";
-import Modal from "../Modal/Modal";
-import "./OrdenesList.css";
 
 const CONTEO_INICIAL: Record<EstadoOrden, number> = {
   Recibido: 0,
@@ -30,9 +34,6 @@ export default function OrdenesList() {
     setFiltro,
     openModal,
     setOpenModal,
-    ordenAEliminar,
-    setOrdenAEliminar,
-    eliminarOrden,
   } = useOrdenContext();
 
   // Conteos sobre TODA la lista (los chips no dependen del buscador)
@@ -67,19 +68,8 @@ export default function OrdenesList() {
     });
   }, [ordenes, busqueda, filtro]);
 
-  async function confirmarEliminacion() {
-    if (!ordenAEliminar) return;
-
-    try {
-      await eliminarOrden(ordenAEliminar.id);
-      setOrdenAEliminar(null);
-    } catch {
-      setOrdenAEliminar(null);
-    }
-  }
-
   return (
-    <section className="ordenes">
+    <section>
       <div className="listado-barra">
         <Buscador
           valor={busqueda}
@@ -87,13 +77,9 @@ export default function OrdenesList() {
           placeholder="Buscar por número, cliente o número de serie…"
         />
 
-        <button
-          type="button"
-          className="boton-primario"
-          onClick={() => setOpenModal(true)}
-        >
+        <Button variant="contained" onClick={() => setOpenModal(true)}>
           + Nueva orden
-        </button>
+        </Button>
       </div>
 
       <ChipsEstado
@@ -104,82 +90,53 @@ export default function OrdenesList() {
       />
 
       {error && ordenes.length > 0 && (
-        <div className="aviso-error">
-          <span>{error}</span>
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={() => obtenerOrdenes()}
-          >
-            Reintentar
-          </button>
-        </div>
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => obtenerOrdenes()}
+            >
+              Reintentar
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
       )}
 
-      {cargando && ordenes.length === 0 && <p className="estado">Cargando…</p>}
+      {cargando && ordenes.length === 0 && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+          <CircularProgress />
+        </Box>
+      )}
 
       {!cargando && error && ordenes.length === 0 && (
-        <div className="estado estado--error">
-          <p>{error}</p>
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={() => obtenerOrdenes()}
-          >
+        <Stack spacing={2} sx={{ alignItems: "center", py: 5 }}>
+          <Alert severity="error">{error}</Alert>
+          <Button variant="outlined" onClick={() => obtenerOrdenes()}>
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Stack>
       )}
 
       {!cargando && !error && ordenesVisibles.length === 0 && (
-        <p className="estado">
+        <Typography color="text.secondary" align="center" sx={{ py: 5 }}>
           {busqueda || filtro !== "Todos"
             ? "Ninguna orden coincide con el filtro."
             : "Todavía no hay órdenes cargadas."}
-        </p>
+        </Typography>
       )}
 
-      <div className="grilla">
+      <Box className="grilla">
         {ordenesVisibles.map((orden) => (
-          <Orden
-            key={orden.id}
-            orden={orden}
-            onEliminar={() => setOrdenAEliminar(orden)}
-          />
+          <Orden key={orden.id} orden={orden} />
         ))}
-      </div>
+      </Box>
 
       {openModal && <ModalAltaOrden onCerrar={() => setOpenModal(false)} />}
-
-      {ordenAEliminar && (
-        <Modal
-          titulo="Eliminar orden"
-          onCerrar={() => setOrdenAEliminar(null)}
-        >
-          <p>
-            ¿Eliminar la orden <strong>{ordenAEliminar.numeroOrden}</strong> de{" "}
-            <strong>{ordenAEliminar.clienteNombre}</strong>? Se restaurará el
-            stock de los repuestos usados.
-          </p>
-
-          <div className="modal-acciones">
-            <button
-              type="button"
-              className="boton-secundario"
-              onClick={() => setOrdenAEliminar(null)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="boton-peligro"
-              onClick={confirmarEliminacion}
-            >
-              Eliminar
-            </button>
-          </div>
-        </Modal>
-      )}
     </section>
   );
 }

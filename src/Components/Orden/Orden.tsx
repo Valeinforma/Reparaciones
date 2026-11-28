@@ -1,60 +1,100 @@
 import { Link } from "react-router-dom";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import CardHeader from "@mui/material/CardHeader";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import EstadoBadge from "../EstadoBadge/EstadoBadge";
+import { useOrdenContext } from "../OrdenContext/OrdenContext";
 import {
   describirEquipo,
   formatearFecha,
   formatearMoneda,
   type IOrden,
 } from "../../Hooks/useOrdenesApi";
-import "./Orden.css";
+import {
+  avisoError,
+  avisoExito,
+  confirmarEliminacion,
+} from "../../utils/dialogos";
 
 interface OrdenProps {
   orden: IOrden;
-  onEliminar: () => void;
 }
 
-export default function Orden({ orden, onEliminar }: OrdenProps) {
+export default function Orden({ orden }: OrdenProps) {
+  const { eliminarOrden } = useOrdenContext();
+
+  async function onEliminar() {
+    const confirmado = await confirmarEliminacion(
+      `¿Eliminar la orden ${orden.numeroOrden}? Se restaurará el stock de los repuestos usados y no se puede deshacer.`,
+    );
+
+    if (!confirmado) return;
+
+    try {
+      await eliminarOrden(orden.id);
+      avisoExito("Orden eliminada");
+    } catch (err: unknown) {
+      avisoError(
+        err instanceof Error ? err.message : "No se pudo eliminar la orden.",
+      );
+    }
+  }
+
   return (
-    <article className="tarjeta-orden">
-      <div className="tarjeta-orden__principal">
-        <Link to={`/ordenes/${orden.id}`} className="tarjeta-orden__numero">
-          {orden.numeroOrden}
-        </Link>
-        <EstadoBadge estado={orden.estado} />
-      </div>
+    <Card sx={{ display: "flex", flexDirection: "column" }}>
+      <CardHeader
+        title={
+          <Link
+            to={`/ordenes/${orden.id}`}
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            {orden.numeroOrden}
+          </Link>
+        }
+        subheader={orden.clienteNombre}
+        action={<EstadoBadge estado={orden.estado} />}
+      />
 
-      <p className="tarjeta-orden__cliente">{orden.clienteNombre}</p>
+      <CardContent sx={{ flexGrow: 1, pt: 0 }}>
+        <Stack spacing={0.5}>
+          <Typography variant="body2" color="text.secondary">
+            {describirEquipo(
+              orden.equipoTipo,
+              orden.equipoMarca,
+              orden.equipoModelo,
+            )}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Ingreso: {formatearFecha(orden.fechaIngreso)}
+          </Typography>
+          <Typography variant="body1" sx={{ fontWeight: 700, mt: 0.5 }}>
+            {formatearMoneda(orden.costo)}
+          </Typography>
+        </Stack>
+      </CardContent>
 
-      <p className="tarjeta-orden__equipo">
-        {describirEquipo(
-          orden.equipoTipo,
-          orden.equipoMarca,
-          orden.equipoModelo,
-        )}
-      </p>
-
-      <div className="tarjeta-orden__pie">
-        <span className="tarjeta-orden__fecha">
-          {formatearFecha(orden.fechaIngreso)}
-        </span>
-        <span className="tarjeta-orden__costo">
-          {formatearMoneda(orden.costo)}
-        </span>
-      </div>
-
-      <div className="tarjeta-orden__acciones">
-        <Link to={`/ordenes/${orden.id}`} className="tarjeta-orden__ver">
-          Ver detalle
-        </Link>
-        <button
-          type="button"
-          className="accion-peligro"
-          onClick={onEliminar}
-          title="Eliminar orden"
+      <CardActions sx={{ justifyContent: "center", flexWrap: "wrap", gap: 1 }}>
+        <Button
+          size="small"
+          variant="contained"
+          component={Link}
+          to={`/ordenes/${orden.id}`}
         >
-          🗑
-        </button>
-      </div>
-    </article>
+          Ver detalle
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          color="error"
+          onClick={onEliminar}
+        >
+          Eliminar
+        </Button>
+      </CardActions>
+    </Card>
   );
 }

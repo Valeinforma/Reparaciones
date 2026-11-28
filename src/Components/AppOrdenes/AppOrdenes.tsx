@@ -1,7 +1,6 @@
-import { ClienteProvider } from "../ClienteContext/ClienteContext";
-import { OrdenProvider } from "../OrdenContext/OrdenContext";
+import { ClienteProvider } from "../ClienteContext/ClienteProvider";
+import { OrdenProvider } from "../OrdenContext/OrdenProvider";
 import OrdenesList from "../OrdenesList/OrdenesList";
-
 
 export default function AppOrdenes() {
   return (

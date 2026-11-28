@@ -58,16 +58,29 @@ export async function leerError(
 
 
 export async function iniciarSesion(email: string, password: string): Promise<ISesion> {
-  const respuesta = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  let respuesta: Response;
+
+  try {
+    respuesta = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error(
+      "No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo.",
+    );
+  }
 
   const datos = await respuesta.json().catch(() => null);
 
   if (!respuesta.ok) {
- 
+    if (respuesta.status >= 500) {
+      throw new Error(
+        "El servidor no responde en este momento. Esperá unos segundos y volvé a intentar.",
+      );
+    }
+
     throw new Error(datos?.mensaje ?? "No se pudo iniciar sesión.");
   }
 

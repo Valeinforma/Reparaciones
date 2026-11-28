@@ -200,7 +200,7 @@ export default function useOrdenesApi() {
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<FiltroEstado>("Todos");
   const [openModal, setOpenModal] = useState(false);
-  const [ordenAEliminar, setOrdenAEliminar] = useState<IOrden | null>(null);
+
 
   // GET /api/ordenes
   const obtenerOrdenes = useCallback(async (): Promise<IOrden[] | undefined> => {
@@ -301,7 +301,5 @@ export default function useOrdenesApi() {
     setFiltro,
     openModal,
     setOpenModal,
-    ordenAEliminar,
-    setOrdenAEliminar,
   };
 }

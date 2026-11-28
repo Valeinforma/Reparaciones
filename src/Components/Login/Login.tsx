@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import { iniciarSesion, useSesion } from "../../Hooks/useSesion";
 import "./Login.css";
-
 
 export default function Login() {
   const sesion = useSesion();
@@ -33,7 +37,6 @@ export default function Login() {
 
     try {
       await iniciarSesion(email.trim(), password);
-
       navigate("/ordenes", { replace: true });
     } catch (err: unknown) {
       setError(
@@ -47,71 +50,64 @@ export default function Login() {
 
   return (
     <div className="login">
-      <div className="login__marca">
+      <div className="login__caja">
         <div className="login__logo">R</div>
 
-        <div className="login__frase">
-          <p>Gestioná cada reparación desde un solo lugar.</p>
-          <p className="login__frase-2">
-            Clientes, equipos y órdenes de servicio — todo el taller en una
-            pantalla.
-          </p>
-        </div>
+        <h1 className="login__titulo">Iniciar sesión</h1>
+        <p className="login__sub">
+          Gestioná cada reparación desde un solo lugar.
+        </p>
 
-        <p className="login__pie">Sistema interno de reparaciones</p>
-      </div>
+        <form className="login__form" onSubmit={alEnviar}>
+          <Stack spacing={2}>
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              autoComplete="email"
+              placeholder="admin@techfix.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoFocus
+            />
 
-      <div className="login__lado">
-        <div className="login__caja">
-          <h1>Iniciar sesión</h1>
-          <p className="login__sub">Ingresá con tu cuenta del taller.</p>
-
-          <form className="login__form" onSubmit={alEnviar}>
-            <label>
-              Email
-              <input
-                type="email"
-                autoComplete="email"
-                placeholder="admin@techfix.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+            <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+              <TextField
+                fullWidth
+                label="Contraseña"
+                type={verPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
-            </label>
+              <IconButton
+                onClick={() => setVerPassword((v) => !v)}
+                aria-label={
+                  verPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+                sx={{ mt: 0.5 }}
+              >
+                {verPassword ? "🙈" : "👁"}
+              </IconButton>
+            </Stack>
 
-            <label>
-              Contraseña
-              <span className="login__clave">
-                <input
-                  type={verPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="login__ojo"
-                  onClick={() => setVerPassword((v) => !v)}
-                  aria-label={
-                    verPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                  }
-                >
-                  {verPassword ? "🙈" : "👁"}
-                </button>
-              </span>
-            </label>
+            {error && <Alert severity="error">{error}</Alert>}
 
-            {error && <p className="login__error">{error}</p>}
-
-            <button type="submit" className="login__boton" disabled={enviando}>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={enviando}
+            >
               {enviando ? "Ingresando…" : "Ingresar"}
-            </button>
-          </form>
+            </Button>
+          </Stack>
+        </form>
 
-          <p className="login__ayuda">
-            ¿Problemas para entrar? Consultá al administrador.
-          </p>
-        </div>
+        <p className="login__ayuda">
+          ¿Problemas para entrar? Consultá al administrador.
+        </p>
       </div>
     </div>
   );

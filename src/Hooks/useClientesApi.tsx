@@ -16,7 +16,6 @@ export default function useClientesApi() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<ICliente | null>(
     null,
   );
-  const [clienteAEliminar, setClienteAEliminar] = useState<ICliente | null>(null);
   const [clienteEquipos, setClienteEquipos] = useState<ICliente | null>(null);
 
   // GET /api/clientes
@@ -158,8 +157,6 @@ export default function useClientesApi() {
     setOpenModal,
     clienteSeleccionado,
     setClienteSeleccionado,
-    clienteAEliminar,
-    setClienteAEliminar,
     clienteEquipos,
     setClienteEquipos,
   };

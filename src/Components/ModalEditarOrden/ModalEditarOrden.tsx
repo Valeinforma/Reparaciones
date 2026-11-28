@@ -1,9 +1,12 @@
 import { useState } from "react";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import Modal from "../Modal/Modal";
 import { useOrdenDetalleContext } from "../OrdenDetalleContext/OrdenDetalleContext";
 import { paraInputFecha } from "../../Hooks/useOrdenesApi";
-import "./ModalEditarOrden.css";
-
+import { avisoExito } from "../../utils/dialogos";
 
 export default function ModalEditarOrden({
   onCerrar,
@@ -49,6 +52,7 @@ export default function ModalEditarOrden({
         fechaEstimada: fechaEstimada || null,
         observaciones: observaciones.trim() || null,
       });
+      avisoExito("Orden actualizada");
       onCerrar();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "No se pudo guardar.");
@@ -58,51 +62,52 @@ export default function ModalEditarOrden({
 
   return (
     <Modal titulo="Editar orden" onCerrar={onCerrar}>
-      <form className="form-editar-orden" onSubmit={alGuardar}>
-        <label>
-          Fecha estimada de entrega
-          <input
+      <form onSubmit={alGuardar}>
+        <Stack spacing={2}>
+          <TextField
+            fullWidth
             type="date"
+            label="Fecha estimada de entrega"
             value={fechaEstimada}
             onChange={(e) => setFechaEstimada(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
-        </label>
 
-        <label>
-          Problema reportado
-          <textarea
+          <TextField
+            fullWidth
+            multiline
             rows={3}
-            maxLength={1000}
+            label="Problema reportado"
             value={problemaReportado}
             onChange={(e) => setProblemaReportado(e.target.value)}
+            slotProps={{ htmlInput: { maxLength: 1000 } }}
           />
-        </label>
 
-        <label>
-          Observaciones
-          <textarea
+          <TextField
+            fullWidth
+            multiline
             rows={3}
-            maxLength={2000}
+            label="Observaciones"
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
+            slotProps={{ htmlInput: { maxLength: 2000 } }}
           />
-        </label>
 
-        {error && <p className="form-editar-orden__error">{error}</p>}
+          {error && <Alert severity="error">{error}</Alert>}
 
-        <div className="modal-acciones">
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={onCerrar}
-            disabled={guardando}
-          >
-            Cancelar
-          </button>
-          <button type="submit" className="boton-primario" disabled={guardando}>
-            {guardando ? "Guardando…" : "Guardar cambios"}
-          </button>
-        </div>
+          <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+            <Button
+              variant="outlined"
+              onClick={onCerrar}
+              disabled={guardando}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" disabled={guardando}>
+              {guardando ? "Guardando…" : "Guardar cambios"}
+            </Button>
+          </Stack>
+        </Stack>
       </form>
     </Modal>
   );

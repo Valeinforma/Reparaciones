@@ -39,7 +39,7 @@ export default function useEquiposApi() {
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<IEquipo | null>(
     null,
   );
-  const [equipoAEliminar, setEquipoAEliminar] = useState<IEquipo | null>(null);
+
 
   // GET /api/equipos (o ?clienteId= si se pide desde Clientes)
   const obtenerEquipos = useCallback(
@@ -185,7 +185,5 @@ export default function useEquiposApi() {
     setOpenModal,
     equipoSeleccionado,
     setEquipoSeleccionado,
-    equipoAEliminar,
-    setEquipoAEliminar,
   };
 }

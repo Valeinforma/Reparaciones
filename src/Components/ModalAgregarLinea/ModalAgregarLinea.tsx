@@ -1,9 +1,16 @@
 import { useState } from "react";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import Modal from "../Modal/Modal";
 import { useOrdenDetalleContext } from "../OrdenDetalleContext/OrdenDetalleContext";
 import { formatearMoneda } from "../../Hooks/useOrdenesApi";
 import type { TipoLinea } from "../../Hooks/useOrdenDetalleApi";
-import "./ModalAgregarLinea.css";
+import { avisoExito } from "../../utils/dialogos";
 
 interface ModalAgregarLineaProps {
   tipo: TipoLinea;
@@ -42,7 +49,9 @@ export default function ModalAgregarLinea({
         (detalle) => detalle.repuestoId === itemId,
       )?.cantidad ?? 0);
 
-  const sinCatalogo = esServicio ? servicios.length === 0 : repuestos.length === 0;
+  const sinCatalogo = esServicio
+    ? servicios.length === 0
+    : repuestos.length === 0;
 
   async function alGuardar(e: React.FormEvent) {
     e.preventDefault();
@@ -50,12 +59,12 @@ export default function ModalAgregarLinea({
     if (guardando) return;
 
     if (!itemId) {
-      setError(esServicio ? "Elegi un servicio." : "Elegi un repuesto.");
+      setError(esServicio ? "Elegí un servicio." : "Elegí un repuesto.");
       return;
     }
 
     if (!Number.isInteger(cantidad) || cantidad < 1) {
-      setError("La cantidad debe ser un numero entero mayor o igual a 1.");
+      setError("La cantidad debe ser un número entero mayor o igual a 1.");
       return;
     }
 
@@ -69,6 +78,7 @@ export default function ModalAgregarLinea({
 
     try {
       await agregarLinea(tipo, itemId, cantidad);
+      avisoExito(esServicio ? "Servicio agregado" : "Repuesto agregado");
       onCerrar();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "No se pudo agregar.");
@@ -79,88 +89,92 @@ export default function ModalAgregarLinea({
   return (
     <Modal titulo={titulo} onCerrar={onCerrar}>
       {sinCatalogo ? (
-        <>
-          <p className="estado">
-            No hay {esServicio ? "servicios" : "repuestos"} activos disponibles.
-          </p>
-          <div className="modal-acciones">
-            <button type="button" className="boton-secundario" onClick={onCerrar}>
+        <Stack spacing={2}>
+          <Typography color="text.secondary">
+            No hay {esServicio ? "servicios" : "repuestos"} activos
+            disponibles.
+          </Typography>
+          <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
+            <Button variant="outlined" onClick={onCerrar}>
               Cerrar
-            </button>
-          </div>
-        </>
+            </Button>
+          </Stack>
+        </Stack>
       ) : (
-        <form className="form-linea" onSubmit={alGuardar}>
-          <label>
-            {esServicio ? "Servicio" : "Repuesto"}
-            <select
+        <form onSubmit={alGuardar}>
+          <Stack spacing={2}>
+            <TextField
+              select
+              fullWidth
+              label={esServicio ? "Servicio" : "Repuesto"}
               value={itemId}
               onChange={(e) => setItemId(Number(e.target.value))}
               autoFocus
             >
-              <option value={0}>Selecciona una opcion…</option>
+              <MenuItem value={0}>Seleccioná una opción…</MenuItem>
               {esServicio
                 ? servicios.map((servicio) => (
-                    <option key={servicio.id} value={servicio.id}>
+                    <MenuItem key={servicio.id} value={servicio.id}>
                       {servicio.nombre} — {formatearMoneda(servicio.precio)}
-                    </option>
+                    </MenuItem>
                   ))
                 : repuestos.map((repuesto) => (
-                    <option key={repuesto.id} value={repuesto.id}>
-                      {repuesto.nombre} — {formatearMoneda(repuesto.precio)} (stock{" "}
-                      {repuesto.stock})
-                    </option>
+                    <MenuItem key={repuesto.id} value={repuesto.id}>
+                      {repuesto.nombre} — {formatearMoneda(repuesto.precio)}{" "}
+                      (stock {repuesto.stock})
+                    </MenuItem>
                   ))}
-            </select>
-          </label>
+            </TextField>
 
-          <label>
-            Cantidad
-            <input
+            <TextField
+              fullWidth
               type="number"
-              min={1}
-              step={1}
+              label="Cantidad"
               value={cantidad}
               onChange={(e) => setCantidad(Number(e.target.value))}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
-          </label>
 
-          {itemId > 0 && (
-            <div className="form-linea__resumen">
-              <span>
-                Precio unitario: <strong>{formatearMoneda(precio)}</strong>
-              </span>
-              <span>
-                Subtotal: <strong>{formatearMoneda(precio * cantidad)}</strong>
-              </span>
-              {stock !== null && (
-                <span>
-                  Stock disponible: <strong>{stock}</strong>
-                </span>
-              )}
-              {yaAgregado > 0 && (
-                <span>
-                  Ya en la orden: <strong>{yaAgregado}</strong>
-                </span>
-              )}
-            </div>
-          )}
+            {itemId > 0 && (
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Stack spacing={0.5}>
+                  <Typography variant="body2" color="text.secondary">
+                    Precio unitario:{" "}
+                    <strong>{formatearMoneda(precio)}</strong>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Subtotal:{" "}
+                    <strong>{formatearMoneda(precio * cantidad)}</strong>
+                  </Typography>
+                  {stock !== null && (
+                    <Typography variant="body2" color="text.secondary">
+                      Stock disponible: <strong>{stock}</strong>
+                    </Typography>
+                  )}
+                  {yaAgregado > 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      Ya en la orden: <strong>{yaAgregado}</strong>
+                    </Typography>
+                  )}
+                </Stack>
+              </Paper>
+            )}
 
-          {error && <p className="form-linea__error">{error}</p>}
+            {error && <Alert severity="error">{error}</Alert>}
 
-          <div className="modal-acciones">
-            <button
-              type="button"
-              className="boton-secundario"
-              onClick={onCerrar}
-              disabled={guardando}
-            >
-              Cancelar
-            </button>
-            <button type="submit" className="boton-primario" disabled={guardando}>
-              {guardando ? "Agregando…" : "Agregar"}
-            </button>
-          </div>
+            <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+              <Button
+                variant="outlined"
+                onClick={onCerrar}
+                disabled={guardando}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" variant="contained" disabled={guardando}>
+                {guardando ? "Agregando…" : "Agregar"}
+              </Button>
+            </Stack>
+          </Stack>
         </form>
       )}
     </Modal>

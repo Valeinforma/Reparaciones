@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import Modal from "../Modal/Modal";
 import EstadoBadge from "../EstadoBadge/EstadoBadge";
 import { headersSesion, leerError } from "../../Hooks/useSesion";
 import type ICliente from "../../Interfaces/ICliente";
 import type { IEquipo } from "../../Hooks/useEquiposApi";
-import "./ModalEquiposCliente.css";
 
 const URL_BASE = "/api/equipos";
 
@@ -12,7 +17,6 @@ interface ModalEquiposClienteProps {
   cliente: ICliente;
   onCerrar: () => void;
 }
-
 
 export default function ModalEquiposCliente({
   cliente,
@@ -58,34 +62,52 @@ export default function ModalEquiposCliente({
       titulo={`Equipos de ${cliente.nombre} ${cliente.apellido}`}
       onCerrar={onCerrar}
     >
-      {error && <p className="form-cliente__error">{error}</p>}
-
-      {equipos === null && !error && <p className="estado">Cargando…</p>}
-
-      {equipos?.length === 0 && (
-        <p className="estado">Este cliente no tiene equipos cargados.</p>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
       )}
 
-      <ul className="lista-equipos">
-        {equipos?.map((equipo) => (
-          <li key={equipo.id}>
-            <div className="lista-equipos__datos">
-              <span className="lista-equipos__nombre">
-                {[equipo.tipo, equipo.marca, equipo.modelo]
-                  .filter(Boolean)
-                  .join(" ") || `Equipo #${equipo.id}`}
-              </span>
-              {equipo.numeroSerie && (
-                <span className="lista-equipos__serie">
-                  S/N {equipo.numeroSerie}
-                </span>
-              )}
-            </div>
+      {equipos === null && !error && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+          <CircularProgress />
+        </Box>
+      )}
 
-            {equipo.ordenEstado && <EstadoBadge estado={equipo.ordenEstado} />}
-          </li>
+      {equipos?.length === 0 && (
+        <Typography color="text.secondary">
+          Este cliente no tiene equipos cargados.
+        </Typography>
+      )}
+
+      <Stack spacing={1.5}>
+        {equipos?.map((equipo) => (
+          <Paper key={equipo.id} variant="outlined" sx={{ p: 1.5 }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", justifyContent: "space-between" }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 600 }}>
+                  {[equipo.tipo, equipo.marca, equipo.modelo]
+                    .filter(Boolean)
+                    .join(" ") || `Equipo #${equipo.id}`}
+                </Typography>
+                {equipo.numeroSerie && (
+                  <Typography variant="body2" color="text.secondary">
+                    S/N {equipo.numeroSerie}
+                  </Typography>
+                )}
+              </Box>
+
+              {equipo.ordenEstado && (
+                <EstadoBadge estado={equipo.ordenEstado} />
+              )}
+            </Stack>
+          </Paper>
         ))}
-      </ul>
+      </Stack>
     </Modal>
   );
 }

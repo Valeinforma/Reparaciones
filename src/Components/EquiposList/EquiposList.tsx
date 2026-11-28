@@ -1,10 +1,14 @@
 import { useMemo } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { useEquipoContext } from "../EquipoContext/EquipoContext";
 import Buscador from "../Buscador/Buscador";
 import Equipo from "../Equipo/Equipo";
 import AgregarEditarEquipo from "../AgregarEditarEquipo/AgregarEditarEquipo";
-import Modal from "../Modal/Modal";
-import "./EquiposList.css";
 
 export default function EquiposList() {
   const {
@@ -18,9 +22,6 @@ export default function EquiposList() {
     setOpenModal,
     equipoSeleccionado,
     setEquipoSeleccionado,
-    equipoAEliminar,
-    setEquipoAEliminar,
-    eliminarEquipo,
   } = useEquipoContext();
 
   // Filtro en memoria: tipo / marca / modelo / serie / cliente
@@ -52,120 +53,76 @@ export default function EquiposList() {
     setOpenModal(true);
   }
 
-  async function confirmarEliminacion() {
-    if (!equipoAEliminar) return;
-
-    try {
-      await eliminarEquipo(equipoAEliminar.id);
-      setEquipoAEliminar(null);
-    } catch {
-      // El mensaje ya quedó en el estado `error` del hook
-      setEquipoAEliminar(null);
-    }
-  }
-
   return (
-    <section className="equipos">
+    <section>
       <div className="listado-barra">
         <Buscador
           valor={busqueda}
           onCambio={setBusqueda}
-          placeholder="Buscar por tipo, marca, serie o cliente…"
+          placeholder="Buscar por tipo, marca, modelo, serie o cliente…"
         />
 
-        <button type="button" className="boton-primario" onClick={abrirAlta}>
+        <Button variant="contained" onClick={abrirAlta}>
           + Nuevo equipo
-        </button>
+        </Button>
       </div>
 
       {error && equipos.length > 0 && (
-        <div className="aviso-error">
-          <span>{error}</span>
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={() => obtenerEquipos()}
-          >
-            Reintentar
-          </button>
-        </div>
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => obtenerEquipos()}
+            >
+              Reintentar
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
       )}
 
-      {cargando && equipos.length === 0 && <p className="estado">Cargando…</p>}
+      {cargando && equipos.length === 0 && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+          <CircularProgress />
+        </Box>
+      )}
 
       {!cargando && error && equipos.length === 0 && (
-        <div className="estado estado--error">
-          <p>{error}</p>
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={() => obtenerEquipos()}
-          >
+        <Stack spacing={2} sx={{ alignItems: "center", py: 5 }}>
+          <Alert severity="error">{error}</Alert>
+          <Button variant="outlined" onClick={() => obtenerEquipos()}>
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Stack>
       )}
 
       {!cargando && !error && equiposVisibles.length === 0 && (
-        <p className="estado">
+        <Typography color="text.secondary" align="center" sx={{ py: 5 }}>
           {busqueda
             ? "Ningún equipo coincide con la búsqueda."
             : "Todavía no hay equipos cargados."}
-        </p>
+        </Typography>
       )}
 
-      <div className="grilla">
+      <Box className="grilla">
         {equiposVisibles.map((equipo) => (
           <Equipo
             key={equipo.id}
             equipo={equipo}
             onEditar={() => abrirEdicion(equipo)}
-            onEliminar={() => setEquipoAEliminar(equipo)}
           />
         ))}
-      </div>
+      </Box>
 
       {openModal && (
         <AgregarEditarEquipo
           inicial={equipoSeleccionado}
           onCerrar={() => setOpenModal(false)}
         />
-      )}
-
-      {equipoAEliminar && (
-        <Modal
-          titulo="Eliminar equipo"
-          onCerrar={() => setEquipoAEliminar(null)}
-        >
-          <p>
-            ¿Eliminar el equipo{" "}
-            <strong>
-              {[equipoAEliminar.tipo, equipoAEliminar.marca, equipoAEliminar.modelo]
-                .filter(Boolean)
-                .join(" ") || `#${equipoAEliminar.id}`}
-            </strong>
-            ? Esta acción no se puede deshacer.
-          </p>
-
-          {error && <p className="form-equipo__error">{error}</p>}
-
-          <div className="modal-acciones">
-            <button
-              type="button"
-              className="boton-secundario"
-              onClick={() => setEquipoAEliminar(null)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="boton-peligro"
-              onClick={confirmarEliminacion}
-            >
-              Eliminar
-            </button>
-          </div>
-        </Modal>
       )}
     </section>
   );

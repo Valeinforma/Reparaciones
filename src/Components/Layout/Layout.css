@@ -1,25 +1,30 @@
 .layout {
   display: flex;
-  min-height: 100vh;
-}
-
-.layout__principal {
-  display: flex;
-  flex-direction: column;
   flex: 1;
-  min-width: 0;
+  flex-direction: column;
+  min-height: 100svh;
 }
 
 .layout__contenido {
   flex: 1;
   width: 100%;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 24px;
+  padding: 0 32px 48px;
+}
+
+.layout__pie {
+  padding: 16px 32px 24px;
+  border-top: 1px solid var(--borde);
+  color: var(--texto-2);
+  font-size: 13px;
+  text-align: center;
 }
 
 @media (max-width: 720px) {
-  .layout {
-    flex-direction: column;
+  .layout__contenido {
+    padding: 0 18px 40px;
+  }
+
+  .layout__pie {
+    padding: 14px 18px 20px;
   }
 }

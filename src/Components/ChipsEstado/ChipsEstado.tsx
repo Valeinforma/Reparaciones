@@ -1,10 +1,10 @@
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
 import {
   ETIQUETAS_ESTADO,
   type EstadoOrden,
   type FiltroEstado,
 } from "../../Hooks/useOrdenesApi";
-import "./ChipsEstado.css";
-
 
 const ORDEN_CHIPS: FiltroEstado[] = [
   "Todos",
@@ -31,21 +31,28 @@ export default function ChipsEstado({
   total,
 }: ChipsEstadoProps) {
   return (
-    <div className="chips">
+    <Stack
+      direction="row"
+      useFlexGap
+      spacing={1}
+      sx={{ flexWrap: "wrap", mb: 2.5 }}
+    >
       {ORDEN_CHIPS.map((chip) => {
         const cantidad = chip === "Todos" ? total : conteos[chip];
+        const activo = filtro === chip;
+        const etiqueta = chip === "Todos" ? "Todos" : ETIQUETAS_ESTADO[chip];
+
         return (
-          <button
+          <Chip
             key={chip}
-            type="button"
-            className={`chip${filtro === chip ? " chip--activo" : ""}`}
+            clickable
+            label={`${etiqueta} · ${cantidad}`}
+            color={activo ? "primary" : "default"}
+            variant={activo ? "filled" : "outlined"}
             onClick={() => onFiltro(chip)}
-          >
-            {chip === "Todos" ? "Todos" : ETIQUETAS_ESTADO[chip]}
-            <span className="chip__conteo">{cantidad}</span>
-          </button>
+          />
         );
       })}
-    </div>
+    </Stack>
   );
 }

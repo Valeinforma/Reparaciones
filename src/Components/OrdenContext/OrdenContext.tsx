@@ -1,24 +1,15 @@
-
-import React from "react";
-import useOrdenesApi from "../../Hooks/useOrdenesApi";
+import { createContext, useContext } from "react";
+import type useOrdenesApi from "../../Hooks/useOrdenesApi";
 
 export type OrdenContextType = ReturnType<typeof useOrdenesApi>;
 
-const OrdenContext = React.createContext<OrdenContextType | null>(null);
-
-export function OrdenProvider({ children }: { children: React.ReactNode }) {
-  const ordenApi = useOrdenesApi();
-
-  return (
-    <OrdenContext.Provider value={ordenApi}>{children}</OrdenContext.Provider>
-  );
-}
+export const OrdenContext = createContext<OrdenContextType | null>(null);
 
 export function useOrdenContext(): OrdenContextType {
-  const context = React.useContext(OrdenContext);
+  const context = useContext(OrdenContext);
 
-  if (!context) {
-    throw new Error("useOrdenContext debe utilizarse dentro de un OrdenProvider");
+  if (context === null) {
+    throw new Error("useOrdenContext debe usarse dentro de un OrdenProvider");
   }
 
   return context;

@@ -1,9 +1,14 @@
 import { useState } from "react";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import Modal from "../Modal/Modal";
 import { useEquipoContext } from "../EquipoContext/EquipoContext";
 import { useClienteContext } from "../ClienteContext/ClienteContext";
 import type { IEquipo, IEquipoInput } from "../../Hooks/useEquiposApi";
-import "./AgregarEditarEquipo.css";
+import { avisoExito } from "../../utils/dialogos";
 
 interface AgregarEditarEquipoProps {
   inicial: IEquipo | null; // null = alta
@@ -51,8 +56,10 @@ export default function AgregarEditarEquipo({
     try {
       if (inicial) {
         await editarEquipo(inicial.id, datos);
+        avisoExito("Equipo actualizado");
       } else {
         await agregarEquipo(datos);
+        avisoExito("Equipo creado");
       }
       onCerrar();
     } catch (err: unknown) {
@@ -66,83 +73,84 @@ export default function AgregarEditarEquipo({
       titulo={inicial ? "Editar equipo" : "Nuevo equipo"}
       onCerrar={onCerrar}
     >
-      <form className="form-equipo" onSubmit={alGuardar}>
-        <label>
-          Cliente *
-          <select
+      <form onSubmit={alGuardar}>
+        <Stack spacing={2}>
+          <TextField
+            select
+            fullWidth
+            label="Cliente *"
             value={clienteId}
             onChange={(e) => setClienteId(Number(e.target.value))}
             autoFocus
           >
-            <option value={0}>Seleccioná un cliente…</option>
+            <MenuItem value={0}>Seleccioná un cliente…</MenuItem>
             {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>
+              <MenuItem key={cliente.id} value={cliente.id}>
                 {cliente.nombre} {cliente.apellido}
-              </option>
+              </MenuItem>
             ))}
-          </select>
-        </label>
+          </TextField>
 
-        <div className="form-equipo__fila">
-          <label>
-            Tipo
-            <input
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              fullWidth
+              label="Tipo"
+              placeholder="Notebook, PC, Impresora…"
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
-              placeholder="Notebook, PC, Impresora…"
             />
-          </label>
+            <TextField
+              fullWidth
+              label="Marca"
+              value={marca}
+              onChange={(e) => setMarca(e.target.value)}
+            />
+          </Stack>
 
-          <label>
-            Marca
-            <input value={marca} onChange={(e) => setMarca(e.target.value)} />
-          </label>
-        </div>
-
-        <div className="form-equipo__fila">
-          <label>
-            Modelo
-            <input value={modelo} onChange={(e) => setModelo(e.target.value)} />
-          </label>
-
-          <label>
-            Número de serie
-            <input
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              fullWidth
+              label="Modelo"
+              value={modelo}
+              onChange={(e) => setModelo(e.target.value)}
+            />
+            <TextField
+              fullWidth
+              label="Número de serie"
               value={numeroSerie}
               onChange={(e) => setNumeroSerie(e.target.value)}
             />
-          </label>
-        </div>
+          </Stack>
 
-        <label>
-          Descripción
-          <textarea
+          <TextField
+            fullWidth
+            multiline
             rows={3}
+            label="Descripción"
+            placeholder="Detalles del equipo, accesorios, estado…"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Detalles del equipo, accesorios, estado…"
           />
-        </label>
 
-        {error && <p className="form-equipo__error">{error}</p>}
+          {error && <Alert severity="error">{error}</Alert>}
 
-        <div className="modal-acciones">
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={onCerrar}
-            disabled={guardando}
-          >
-            Cancelar
-          </button>
-          <button type="submit" className="boton-primario" disabled={guardando}>
-            {guardando
-              ? "Guardando…"
-              : inicial
-                ? "Guardar cambios"
-                : "Crear equipo"}
-          </button>
-        </div>
+          <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+            <Button
+              variant="outlined"
+              onClick={onCerrar}
+              disabled={guardando}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" disabled={guardando}>
+              {guardando
+                ? "Guardando…"
+                : inicial
+                  ? "Guardar cambios"
+                  : "Crear equipo"}
+            </Button>
+          </Stack>
+        </Stack>
       </form>
     </Modal>
   );

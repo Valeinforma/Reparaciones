@@ -1,37 +1,17 @@
-
-
-import React from "react";
-import useOrdenDetalleApi from "../../Hooks/useOrdenDetalleApi";
+import { createContext, useContext } from "react";
+import type useOrdenDetalleApi from "../../Hooks/useOrdenDetalleApi";
 
 export type OrdenDetalleContextType = ReturnType<typeof useOrdenDetalleApi>;
 
-const OrdenDetalleContext =
-  React.createContext<OrdenDetalleContextType | null>(null);
-
-interface OrdenDetalleProviderProps {
-  id: number;
-  children: React.ReactNode;
-}
-
-export function OrdenDetalleProvider({
-  id,
-  children,
-}: OrdenDetalleProviderProps) {
-  const detalleApi = useOrdenDetalleApi(id);
-
-  return (
-    <OrdenDetalleContext.Provider value={detalleApi}>
-      {children}
-    </OrdenDetalleContext.Provider>
-  );
-}
+export const OrdenDetalleContext =
+  createContext<OrdenDetalleContextType | null>(null);
 
 export function useOrdenDetalleContext(): OrdenDetalleContextType {
-  const context = React.useContext(OrdenDetalleContext);
+  const context = useContext(OrdenDetalleContext);
 
-  if (!context) {
+  if (context === null) {
     throw new Error(
-      "useOrdenDetalleContext debe utilizarse dentro de un OrdenDetalleProvider",
+      "useOrdenDetalleContext debe usarse dentro de un OrdenDetalleProvider",
     );
   }
 

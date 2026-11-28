@@ -12,11 +12,16 @@ export default defineConfig({
     proxy: {
       '/api': {
         // El front solo pide /api/... (relativo) y Vite lo
-        // reenvía al backend TechFix. Cambiando esta línea
-        // cambiás de backend sin tocar código React.
-        target: 'http://localhost:5137',
+        // reenvía al backend TechFix. En desarrollo usamos el
+        // mismo backend desplegado que render.yaml en producción,
+        // así no hace falta levantar la API en local.
+        target: 'https://techfix-backend-z431.onrender.com',
         changeOrigin: true,
-        secure: false, // localhost es HTTP
+        secure: false,
+        // Render (plan free) duerme la API: damos margen para
+        // que despierte en el primer request.
+        timeout: 120000,
+        proxyTimeout: 120000,
       },
     },
   },

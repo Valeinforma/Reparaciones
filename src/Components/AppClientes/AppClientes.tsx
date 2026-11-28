@@ -1,4 +1,4 @@
-import { ClienteProvider } from "../ClienteContext/ClienteContext";
+import { ClienteProvider } from "../ClienteContext/ClienteProvider";
 import ClientesList from "../ClientesList/ClientesList";
 
 export default function AppClientes() {

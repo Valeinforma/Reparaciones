@@ -1,9 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useSesion } from "../../Hooks/useSesion";
-import Sidebar from "../Sidebar/Sidebar";
 import Header from "../Header/Header";
 import "./Layout.css";
-
 
 export default function Layout() {
   const sesion = useSesion();
@@ -14,15 +12,15 @@ export default function Layout() {
 
   return (
     <div className="layout">
-      <Sidebar sesion={sesion} />
+      <Header sesion={sesion} />
 
-      <div className="layout__principal">
-        <Header sesion={sesion} />
+      <main className="layout__contenido">
+        <Outlet />
+      </main>
 
-        <main className="layout__contenido">
-          <Outlet />
-        </main>
-      </div>
+      <footer className="layout__pie">
+        TechFix Manager · Sistema interno de reparaciones
+      </footer>
     </div>
   );
 }

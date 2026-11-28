@@ -1,5 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { useOrdenDetalleContext } from "../OrdenDetalleContext/OrdenDetalleContext";
 import { useSesion } from "../../Hooks/useSesion";
 import EstadoBadge from "../EstadoBadge/EstadoBadge";
@@ -7,7 +19,6 @@ import EstadoStepper from "../EstadoStepper/EstadoStepper";
 import ModalEditarOrden from "../ModalEditarOrden/ModalEditarOrden";
 import ModalCambioEstado from "../ModalCambioEstado/ModalCambioEstado";
 import ModalAgregarLinea from "../ModalAgregarLinea/ModalAgregarLinea";
-import Modal from "../Modal/Modal";
 import {
   describirEquipo,
   ETIQUETAS_ESTADO,
@@ -16,7 +27,97 @@ import {
   formatearMoneda,
   transicionesDesde,
 } from "../../Hooks/useOrdenesApi";
-import "./OrdenDetalle.css";
+import type { TipoLinea } from "../../Hooks/useOrdenDetalleApi";
+import {
+  avisoError,
+  avisoExito,
+  confirmarEliminacion,
+  confirmarQuitar,
+} from "../../utils/dialogos";
+
+// Una línea de servicio o repuesto, ya normalizada para la vista.
+interface LineaVista {
+  id: number;
+  nombre: string;
+  cantidad: number;
+  precio: number;
+  subtotal: number;
+}
+
+interface ListaLineasProps {
+  titulo: string;
+  tipo: TipoLinea;
+  lineas: LineaVista[];
+  onAgregar: () => void;
+  onQuitar: (tipo: TipoLinea, id: number, nombre: string) => void;
+}
+
+function ListaLineas({
+  titulo,
+  tipo,
+  lineas,
+  onAgregar,
+  onQuitar,
+}: ListaLineasProps) {
+  return (
+    <>
+      <Stack
+        direction="row"
+        useFlexGap
+        spacing={1}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          mb: 1,
+        }}
+      >
+        <Typography color="text.secondary">{titulo}</Typography>
+        <Button size="small" variant="outlined" onClick={onAgregar}>
+          + Agregar {tipo}
+        </Button>
+      </Stack>
+
+      {lineas.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+          Sin {tipo}s cargados.
+        </Typography>
+      ) : (
+        <Stack divider={<Divider />}>
+          {lineas.map((linea) => (
+            <Stack
+              key={linea.id}
+              direction="row"
+              sx={{ alignItems: "center", gap: 2, py: 1 }}
+            >
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 500 }}>
+                  {linea.nombre}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {linea.cantidad} × {formatearMoneda(linea.precio)}
+                </Typography>
+              </Box>
+
+              <Typography sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                {formatearMoneda(linea.subtotal)}
+              </Typography>
+
+              <IconButton
+                size="small"
+                color="error"
+                aria-label={`Quitar ${linea.nombre}`}
+                onClick={() => onQuitar(tipo, linea.id, linea.nombre)}
+              >
+                ✕
+              </IconButton>
+            </Stack>
+          ))}
+        </Stack>
+      )}
+    </>
+  );
+}
 
 export default function OrdenDetalle() {
   const {
@@ -33,347 +134,288 @@ export default function OrdenDetalle() {
     setEstadoDestino,
     lineaNueva,
     setLineaNueva,
-    lineaAQuitar,
-    setLineaAQuitar,
-    openEliminar,
-    setOpenEliminar,
   } = useOrdenDetalleContext();
 
   const sesion = useSesion();
   const navigate = useNavigate();
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
 
-  async function confirmarQuitarLinea() {
-    if (!lineaAQuitar) return;
-
-    setErrorAccion(null);
-
-    try {
-      await quitarLinea(lineaAQuitar.tipo, lineaAQuitar.detalleId);
-      setLineaAQuitar(null);
-    } catch (err: unknown) {
-      setErrorAccion(
-        err instanceof Error ? err.message : "No se pudo quitar la línea.",
-      );
-      setLineaAQuitar(null);
-    }
-  }
-
-  async function confirmarEliminacion() {
-    setErrorAccion(null);
-
-    try {
-      await eliminarOrden();
-      setOpenEliminar(false);
-      navigate("/ordenes", { replace: true });
-    } catch (err: unknown) {
-      setErrorAccion(
-        err instanceof Error ? err.message : "No se pudo eliminar la orden.",
-      );
-      setOpenEliminar(false);
-    }
-  }
-
   if (cargando && !orden) {
-    return <p className="estado">Cargando orden…</p>;
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (!orden) {
     return (
-      <div className="estado estado--error">
-        <p>{error ?? "La orden no existe."}</p>
-        <div className="detalle-acciones">
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={() => cargarOrden()}
-          >
+      <Stack spacing={2} sx={{ alignItems: "center", py: 6 }}>
+        <Alert severity="error">{error ?? "La orden no existe."}</Alert>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={() => cargarOrden()}>
             Reintentar
-          </button>
-          <Link to="/ordenes" className="boton-secundario">
+          </Button>
+          <Button variant="contained" component={Link} to="/ordenes">
             Volver al listado
-          </Link>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Stack>
     );
   }
 
   // El rol Recepcion no tiene acceso a /api/repuestos
   const ocultarRepuestos = sinPermisoRepuestos || sesion?.rol === "Recepcion";
   const transiciones = transicionesDesde(orden.estado);
+  const numeroOrden = orden.numeroOrden;
+
+  // Se muestran solo las notas con contenido
+  const notas = [
+    { etiqueta: "Problema reportado", valor: orden.problemaReportado },
+    { etiqueta: "Diagnóstico", valor: orden.diagnostico },
+    { etiqueta: "Solución", valor: orden.solucion },
+    { etiqueta: "Observaciones", valor: orden.observaciones },
+  ].filter((nota): nota is { etiqueta: string; valor: string } =>
+    Boolean(nota.valor),
+  );
+
+  const metadatos = [
+    `Ingreso ${formatearFechaHora(orden.fechaIngreso)}`,
+    orden.fechaEstimada
+      ? `Entrega est. ${formatearFecha(orden.fechaEstimada)}`
+      : "Entrega est. sin definir",
+    `Responsable ${orden.usuarioNombre}`,
+    orden.equipoNumeroSerie ? `S/N ${orden.equipoNumeroSerie}` : "",
+  ].filter(Boolean);
+
+  const servicios: LineaVista[] = orden.detallesServicios.map((detalle) => ({
+    id: detalle.id,
+    nombre: detalle.servicioNombre,
+    cantidad: detalle.cantidad,
+    precio: detalle.precio,
+    subtotal: detalle.subtotal,
+  }));
+
+  const repuestos: LineaVista[] = orden.detallesRepuestos.map((detalle) => ({
+    id: detalle.id,
+    nombre: detalle.repuestoNombre,
+    cantidad: detalle.cantidad,
+    precio: detalle.precio,
+    subtotal: detalle.subtotal,
+  }));
+
+  async function pedirQuitar(
+    tipo: TipoLinea,
+    detalleId: number,
+    nombre: string,
+  ) {
+    const confirmado = await confirmarQuitar(
+      `¿Quitar "${nombre}" de la orden? El total se recalcula automáticamente.`,
+    );
+
+    if (!confirmado) return;
+
+    setErrorAccion(null);
+
+    try {
+      await quitarLinea(tipo, detalleId);
+      avisoExito("Línea quitada");
+    } catch (err: unknown) {
+      const mensaje =
+        err instanceof Error ? err.message : "No se pudo quitar la línea.";
+      setErrorAccion(mensaje);
+      avisoError(mensaje);
+    }
+  }
+
+  async function pedirEliminar() {
+    const confirmado = await confirmarEliminacion(
+      `¿Eliminar la orden ${numeroOrden}? Se restaurará el stock de los repuestos usados y no se puede deshacer.`,
+    );
+
+    if (!confirmado) return;
+
+    setErrorAccion(null);
+
+    try {
+      await eliminarOrden();
+      avisoExito("Orden eliminada");
+      navigate("/ordenes", { replace: true });
+    } catch (err: unknown) {
+      const mensaje =
+        err instanceof Error ? err.message : "No se pudo eliminar la orden.";
+      setErrorAccion(mensaje);
+      avisoError(mensaje);
+    }
+  }
 
   return (
-    <section className="detalle">
-      <div className="detalle__cabecera">
-        <div>
-          <Link to="/ordenes" className="detalle__volver">
-            ← Órdenes
-          </Link>
-          <div className="detalle__titulo">
-            <h2>{orden.numeroOrden}</h2>
+    <section>
+      {/* 1. Encabezado */}
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 2,
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 3,
+        }}
+      >
+        <Box>
+          <Button component={Link} to="/ordenes" size="small" sx={{ mb: 1 }}>
+            ← Volver a órdenes
+          </Button>
+
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+            <Typography variant="h2">{orden.numeroOrden}</Typography>
             <EstadoBadge estado={orden.estado} />
-          </div>
-          <p className="detalle__sub">
+          </Stack>
+
+          <Typography sx={{ mt: 0.5 }}>
             {orden.clienteNombre} ·{" "}
             {describirEquipo(
               orden.equipoTipo,
               orden.equipoMarca,
               orden.equipoModelo,
             )}
-          </p>
-        </div>
+          </Typography>
 
-        <div className="detalle-acciones">
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={() => setOpenEditar(true)}
-          >
+          <Typography variant="body2" color="text.secondary">
+            {metadatos.join(" · ")}
+          </Typography>
+        </Box>
+
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={() => setOpenEditar(true)}>
             Editar datos
-          </button>
-          <button
-            type="button"
-            className="boton-peligro"
-            onClick={() => setOpenEliminar(true)}
-          >
+          </Button>
+          <Button variant="contained" color="error" onClick={pedirEliminar}>
             Eliminar
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Box>
 
-      {errorAccion && <div className="aviso-error">{errorAccion}</div>}
-
-      <EstadoStepper estado={orden.estado} />
-
-      <div className="detalle__paneles">
-        <div className="panel">
-          <h3 className="panel__titulo">Datos de la orden</h3>
-
-          <dl className="datos">
-            <div>
-              <dt>Cliente</dt>
-              <dd>{orden.clienteNombre}</dd>
-            </div>
-            <div>
-              <dt>Equipo</dt>
-              <dd>
-                {describirEquipo(
-                  orden.equipoTipo,
-                  orden.equipoMarca,
-                  orden.equipoModelo,
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Número de serie</dt>
-              <dd>{orden.equipoNumeroSerie ?? "—"}</dd>
-            </div>
-            <div>
-              <dt>Responsable</dt>
-              <dd>{orden.usuarioNombre}</dd>
-            </div>
-            <div>
-              <dt>Ingreso</dt>
-              <dd>{formatearFechaHora(orden.fechaIngreso)}</dd>
-            </div>
-            <div>
-              <dt>Estimada</dt>
-              <dd>{formatearFecha(orden.fechaEstimada)}</dd>
-            </div>
-            <div>
-              <dt>Entrega</dt>
-              <dd>{formatearFechaHora(orden.fechaEntrega)}</dd>
-            </div>
-            <div>
-              <dt>Costo total</dt>
-              <dd className="datos__costo">{formatearMoneda(orden.costo)}</dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="panel">
-          <h3 className="panel__titulo">Cambiar estado</h3>
-
-          {transiciones.length === 0 ? (
-            <p className="panel__texto">
-              La orden está en estado{" "}
-              <strong>{ETIQUETAS_ESTADO[orden.estado]}</strong> y no admite más
-              cambios.
-            </p>
-          ) : (
-            <>
-              <p className="panel__texto">
-                Estado actual: <strong>{ETIQUETAS_ESTADO[orden.estado]}</strong>
-              </p>
-              <div className="detalle-acciones detalle-acciones--wrap">
-                {transiciones.map((estado) => (
-                  <button
-                    key={estado}
-                    type="button"
-                    className={
-                      estado === "Cancelado"
-                        ? "boton-peligro"
-                        : "boton-primario"
-                    }
-                    onClick={() => setEstadoDestino(estado)}
-                  >
-                    {estado === "Cancelado"
-                      ? "Cancelar orden"
-                      : `Pasar a ${ETIQUETAS_ESTADO[estado]}`}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="detalle__textos">
-        <div className="panel">
-          <h3 className="panel__titulo">Problema reportado</h3>
-          <p className="panel__texto">
-            {orden.problemaReportado ?? "Sin datos."}
-          </p>
-        </div>
-
-        <div className="panel">
-          <h3 className="panel__titulo">Diagnóstico</h3>
-          <p className="panel__texto">{orden.diagnostico ?? "Sin datos."}</p>
-        </div>
-
-        <div className="panel">
-          <h3 className="panel__titulo">Solución</h3>
-          <p className="panel__texto">{orden.solucion ?? "Sin datos."}</p>
-        </div>
-
-        <div className="panel">
-          <h3 className="panel__titulo">Observaciones</h3>
-          <p className="panel__texto">{orden.observaciones ?? "Sin datos."}</p>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="lineas__cabecera">
-          <h3 className="panel__titulo">Servicios</h3>
-          <button
-            type="button"
-            className="boton-secundario"
-            onClick={() => setLineaNueva("servicio")}
-          >
-            + Agregar servicio
-          </button>
-        </div>
-
-        {orden.detallesServicios.length === 0 ? (
-          <p className="panel__texto">Sin servicios cargados.</p>
-        ) : (
-          <table className="tabla">
-            <thead>
-              <tr>
-                <th>Servicio</th>
-                <th className="tabla__num">Cantidad</th>
-                <th className="tabla__num">Precio</th>
-                <th className="tabla__num">Subtotal</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {orden.detallesServicios.map((detalle) => (
-                <tr key={detalle.id}>
-                  <td>{detalle.servicioNombre}</td>
-                  <td className="tabla__num">{detalle.cantidad}</td>
-                  <td className="tabla__num">{formatearMoneda(detalle.precio)}</td>
-                  <td className="tabla__num">
-                    {formatearMoneda(detalle.subtotal)}
-                  </td>
-                  <td className="tabla__acciones">
-                    <button
-                      type="button"
-                      className="accion-quitar"
-                      title="Quitar servicio"
-                      onClick={() =>
-                        setLineaAQuitar({
-                          tipo: "servicio",
-                          detalleId: detalle.id,
-                          nombre: detalle.servicioNombre,
-                        })
-                      }
-                    >
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {!ocultarRepuestos && (
-        <div className="panel">
-          <div className="lineas__cabecera">
-            <h3 className="panel__titulo">Repuestos</h3>
-            <button
-              type="button"
-              className="boton-secundario"
-              onClick={() => setLineaNueva("repuesto")}
-            >
-              + Agregar repuesto
-            </button>
-          </div>
-
-          {orden.detallesRepuestos.length === 0 ? (
-            <p className="panel__texto">Sin repuestos cargados.</p>
-          ) : (
-            <table className="tabla">
-              <thead>
-                <tr>
-                  <th>Repuesto</th>
-                  <th className="tabla__num">Cantidad</th>
-                  <th className="tabla__num">Precio</th>
-                  <th className="tabla__num">Subtotal</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {orden.detallesRepuestos.map((detalle) => (
-                  <tr key={detalle.id}>
-                    <td>{detalle.repuestoNombre}</td>
-                    <td className="tabla__num">{detalle.cantidad}</td>
-                    <td className="tabla__num">
-                      {formatearMoneda(detalle.precio)}
-                    </td>
-                    <td className="tabla__num">
-                      {formatearMoneda(detalle.subtotal)}
-                    </td>
-                    <td className="tabla__acciones">
-                      <button
-                        type="button"
-                        className="accion-quitar"
-                        title="Quitar repuesto"
-                        onClick={() =>
-                          setLineaAQuitar({
-                            tipo: "repuesto",
-                            detalleId: detalle.id,
-                            nombre: detalle.repuestoNombre,
-                          })
-                        }
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      {errorAccion && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          onClose={() => setErrorAccion(null)}
+        >
+          {errorAccion}
+        </Alert>
       )}
 
-      <div className="detalle__total">
-        <span>Total de la orden</span>
-        <strong>{formatearMoneda(orden.costo)}</strong>
-      </div>
+      {/* 2. Estado */}
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 2 }}>
+        <Typography variant="h3" sx={{ mb: 2 }}>
+          Estado
+        </Typography>
+
+        <EstadoStepper estado={orden.estado} />
+
+        <Divider sx={{ my: 2 }} />
+
+        {transiciones.length === 0 ? (
+          <Typography color="text.secondary">
+            La orden está en estado{" "}
+            <strong>{ETIQUETAS_ESTADO[orden.estado]}</strong> y no admite más
+            cambios.
+          </Typography>
+        ) : (
+          <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: "wrap" }}>
+            {transiciones.map((estado) => (
+              <Button
+                key={estado}
+                variant="contained"
+                color={estado === "Cancelado" ? "error" : "primary"}
+                onClick={() => setEstadoDestino(estado)}
+              >
+                {estado === "Cancelado"
+                  ? "Cancelar orden"
+                  : `Pasar a ${ETIQUETAS_ESTADO[estado]}`}
+              </Button>
+            ))}
+          </Stack>
+        )}
+      </Paper>
+
+      {/* 3. Trabajo: servicios, repuestos y total */}
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 2 }}>
+        <Typography variant="h3" sx={{ mb: 1 }}>
+          Trabajo
+        </Typography>
+
+        <ListaLineas
+          titulo="Servicios"
+          tipo="servicio"
+          lineas={servicios}
+          onAgregar={() => setLineaNueva("servicio")}
+          onQuitar={pedirQuitar}
+        />
+
+        {!ocultarRepuestos && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <ListaLineas
+              titulo="Repuestos"
+              tipo="repuesto"
+              lineas={repuestos}
+              onAgregar={() => setLineaNueva("repuesto")}
+              onQuitar={pedirQuitar}
+            />
+          </>
+        )}
+
+        <Divider sx={{ my: 2 }} />
+
+        <Stack
+          direction="row"
+          sx={{ justifyContent: "space-between", alignItems: "baseline" }}
+        >
+          <Typography variant="h3">Total</Typography>
+          <Typography variant="h2" color="primary">
+            {formatearMoneda(orden.costo)}
+          </Typography>
+        </Stack>
+      </Paper>
+
+      {/* 4. Notas (colapsadas) */}
+      <Accordion
+        disabled={notas.length === 0}
+        disableGutters
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
+          "&::before": { display: "none" },
+        }}
+      >
+        <AccordionSummary expandIcon={<span aria-hidden>▾</span>}>
+          <Typography sx={{ fontWeight: 600 }}>
+            {notas.length > 0
+              ? `Notas de la orden (${notas.length})`
+              : "Sin notas"}
+          </Typography>
+        </AccordionSummary>
+
+        <AccordionDetails>
+          <Stack spacing={2}>
+            {notas.map((nota) => (
+              <Box key={nota.etiqueta}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ textTransform: "uppercase", letterSpacing: "0.5px" }}
+                >
+                  {nota.etiqueta}
+                </Typography>
+                <Typography>{nota.valor}</Typography>
+              </Box>
+            ))}
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
 
       {openEditar && (
         <ModalEditarOrden onCerrar={() => setOpenEditar(false)} />
@@ -391,61 +433,6 @@ export default function OrdenDetalle() {
           tipo={lineaNueva}
           onCerrar={() => setLineaNueva(null)}
         />
-      )}
-
-      {lineaAQuitar && (
-        <Modal titulo="Quitar línea" onCerrar={() => setLineaAQuitar(null)}>
-          <p>
-            ¿Quitar <strong>{lineaAQuitar.nombre}</strong> de la orden? El total
-            se recalcula automáticamente.
-          </p>
-
-          <div className="modal-acciones">
-            <button
-              type="button"
-              className="boton-secundario"
-              onClick={() => setLineaAQuitar(null)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="boton-peligro"
-              onClick={confirmarQuitarLinea}
-            >
-              Quitar
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {openEliminar && (
-        <Modal
-          titulo="Eliminar orden"
-          onCerrar={() => setOpenEliminar(false)}
-        >
-          <p>
-            ¿Eliminar la orden <strong>{orden.numeroOrden}</strong>? Se
-            restaurará el stock de los repuestos usados y no se puede deshacer.
-          </p>
-
-          <div className="modal-acciones">
-            <button
-              type="button"
-              className="boton-secundario"
-              onClick={() => setOpenEliminar(false)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="boton-peligro"
-              onClick={confirmarEliminacion}
-            >
-              Eliminar
-            </button>
-          </div>
-        </Modal>
       )}
     </section>
   );

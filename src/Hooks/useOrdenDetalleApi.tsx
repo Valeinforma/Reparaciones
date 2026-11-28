@@ -15,12 +15,6 @@ const URL_BASE = "/api/ordenes";
 
 export type TipoLinea = "servicio" | "repuesto";
 
-export interface LineaAQuitar {
-  tipo: TipoLinea;
-  detalleId: number;
-  nombre: string;
-}
-
 export default function useOrdenDetalleApi(id: number) {
   const [orden, setOrden] = useState<IOrden | null>(null);
   const [servicios, setServicios] = useState<IServicio[]>([]);
@@ -34,8 +28,6 @@ export default function useOrdenDetalleApi(id: number) {
   const [openEditar, setOpenEditar] = useState(false);
   const [estadoDestino, setEstadoDestino] = useState<EstadoOrden | null>(null);
   const [lineaNueva, setLineaNueva] = useState<TipoLinea | null>(null);
-  const [lineaAQuitar, setLineaAQuitar] = useState<LineaAQuitar | null>(null);
-  const [openEliminar, setOpenEliminar] = useState(false);
 
   // GET /api/ordenes/{id}
   const cargarOrden = useCallback(async (): Promise<IOrden | undefined> => {
@@ -259,9 +251,5 @@ export default function useOrdenDetalleApi(id: number) {
     setEstadoDestino,
     lineaNueva,
     setLineaNueva,
-    lineaAQuitar,
-    setLineaAQuitar,
-    openEliminar,
-    setOpenEliminar,
   };
 }
