@@ -7,6 +7,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { iniciarSesion, useSesion } from "../../Hooks/useSesion";
 import "./Login.css";
+import { mensajeDeError } from "../../utils/api";
 
 export default function Login() {
   const sesion = useSesion();
@@ -38,12 +39,8 @@ export default function Login() {
     try {
       await iniciarSesion(email.trim(), password);
       navigate("/ordenes", { replace: true });
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "No se pudo conectar con el servidor.",
-      );
+    } catch (err) {
+      setError(mensajeDeError(err));
       setEnviando(false);
     }
   }

@@ -11,8 +11,9 @@ import { useEquipoContext } from "../EquipoContext/EquipoContext";
 import {
   avisoError,
   avisoExito,
-  confirmarEliminacion,
+  confirmar,
 } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 interface EquipoProps {
   equipo: IEquipo;
@@ -27,7 +28,7 @@ export default function Equipo({ equipo, onEditar }: EquipoProps) {
     `Equipo #${equipo.id}`;
 
   async function onEliminar() {
-    const confirmado = await confirmarEliminacion(
+    const confirmado = await confirmar(
       `¿Eliminar el equipo "${nombre}"? Esta acción no se puede deshacer.`,
     );
 
@@ -36,10 +37,8 @@ export default function Equipo({ equipo, onEditar }: EquipoProps) {
     try {
       await eliminarEquipo(equipo.id);
       avisoExito("Equipo eliminado");
-    } catch (err: unknown) {
-      avisoError(
-        err instanceof Error ? err.message : "No se pudo eliminar el equipo.",
-      );
+    } catch (err) {
+      avisoError(mensajeDeError(err));
     }
   }
 

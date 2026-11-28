@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { EstadoOrden } from "./useOrdenesApi";
-import { headersSesion, leerError } from "./useSesion";
+import { pedirApi } from "../utils/api";
+import useCarga from "./useCarga";
 
 // Forma de los datos que devuelve /api/equipos.
 export interface IEquipo {
@@ -30,142 +31,64 @@ const URL_BASE = "/api/equipos";
 
 export default function useEquiposApi() {
   const [equipos, setEquipos] = useState<IEquipo[]>([]);
-  const [cargando, setCargando] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const { cargando, error, ejecutar } = useCarga();
 
-  // --- Estado de UI ---
+  // Estado de UI
   const [busqueda, setBusqueda] = useState("");
   const [openModal, setOpenModal] = useState(false);
-  const [equipoSeleccionado, setEquipoSeleccionado] = useState<IEquipo | null>(
-    null,
-  );
-
+  const [equipoSeleccionado, setEquipoSeleccionado] = useState<IEquipo | null>(null);
 
   // GET /api/equipos (o ?clienteId= si se pide desde Clientes)
   const obtenerEquipos = useCallback(
-    async (clienteId?: number): Promise<IEquipo[] | undefined> => {
-      setCargando(true);
-      setError(null);
-
-      const url = clienteId
-        ? `${URL_BASE}?clienteId=${clienteId}`
-        : URL_BASE;
-
-      try {
-        const respuesta = await fetch(url, { headers: headersSesion() });
-
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al obtener los equipos");
-        }
-
-        const datos: IEquipo[] = await respuesta.json();
+    (clienteId?: number) =>
+      ejecutar(async () => {
+        const url = clienteId ? `${URL_BASE}?clienteId=${clienteId}` : URL_BASE;
+        const datos = await pedirApi<IEquipo[]>(url, "Error al obtener los equipos");
         setEquipos(datos);
         return datos;
-      } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "Ocurrió un error desconocido",
-        );
-      } finally {
-        setCargando(false);
-      }
-    },
-    [],
+      }).catch(() => undefined),
+    [ejecutar],
   );
 
-  // POST /api/equipos
+  // El POST devuelve clienteNombre vacío → recargamos la lista.
   const agregarEquipo = useCallback(
-    async (equipo: IEquipoInput): Promise<IEquipo | undefined> => {
-      setCargando(true);
-      setError(null);
-
-      try {
-        const respuesta = await fetch(URL_BASE, {
+    (equipo: IEquipoInput) =>
+      ejecutar(async () => {
+        const nuevo = await pedirApi<IEquipo>(URL_BASE, "Error al crear el equipo", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...headersSesion() },
-          body: JSON.stringify(equipo),
+          body: equipo,
         });
-
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al crear el equipo");
-        }
-
-        const nuevo: IEquipo = await respuesta.json();
-
-        // El POST devuelve clienteNombre vacío → completamos con
-        // los datos del formulario y recargamos en segundo plano.
         setEquipos((actuales) => [nuevo, ...actuales]);
         await obtenerEquipos();
-
         return nuevo;
-      } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "Ocurrió un error desconocido",
-        );
-        throw err;
-      } finally {
-        setCargando(false);
-      }
-    },
-    [obtenerEquipos],
+      }),
+    [ejecutar, obtenerEquipos],
   );
 
-  // PUT /api/equipos/{id} → recargamos para reflejar el cambio
-  // de cliente y el estado de la última orden.
+  // Recargamos para reflejar el cambio de cliente y el estado de la orden.
   const editarEquipo = useCallback(
-    async (id: number, equipo: IEquipoInput): Promise<void> => {
-      setCargando(true);
-      setError(null);
-
-      try {
-        const respuesta = await fetch(`${URL_BASE}/${id}`, {
+    (id: number, equipo: IEquipoInput) =>
+      ejecutar(async () => {
+        await pedirApi(`${URL_BASE}/${id}`, "Error al actualizar el equipo", {
           method: "PUT",
-          headers: { "Content-Type": "application/json", ...headersSesion() },
-          body: JSON.stringify(equipo),
+          body: equipo,
         });
-
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al actualizar el equipo");
-        }
-
         await obtenerEquipos();
-      } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "Ocurrió un error desconocido",
-        );
-        throw err;
-      } finally {
-        setCargando(false);
-      }
-    },
-    [obtenerEquipos],
+      }),
+    [ejecutar, obtenerEquipos],
   );
 
-  // DELETE /api/equipos/{id}
   // El backend responde 409 si el equipo tiene órdenes.
-  const eliminarEquipo = useCallback(async (id: number): Promise<void> => {
-    setCargando(true);
-    setError(null);
-
-    try {
-      const respuesta = await fetch(`${URL_BASE}/${id}`, {
-        method: "DELETE",
-        headers: headersSesion(),
-      });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al eliminar el equipo");
-      }
-
-      setEquipos((actuales) => actuales.filter((e) => e.id !== id));
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Ocurrió un error desconocido",
-      );
-      throw err;
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+  const eliminarEquipo = useCallback(
+    (id: number) =>
+      ejecutar(async () => {
+        await pedirApi(`${URL_BASE}/${id}`, "Error al eliminar el equipo", {
+          method: "DELETE",
+        });
+        setEquipos((actuales) => actuales.filter((e) => e.id !== id));
+      }),
+    [ejecutar],
+  );
 
   useEffect(() => {
     obtenerEquipos();

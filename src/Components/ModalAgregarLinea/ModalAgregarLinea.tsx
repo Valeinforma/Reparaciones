@@ -11,6 +11,7 @@ import { useOrdenDetalleContext } from "../OrdenDetalleContext/OrdenDetalleConte
 import { formatearMoneda } from "../../Hooks/useOrdenesApi";
 import type { TipoLinea } from "../../Hooks/useOrdenDetalleApi";
 import { avisoExito } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 interface ModalAgregarLineaProps {
   tipo: TipoLinea;
@@ -80,8 +81,8 @@ export default function ModalAgregarLinea({
       await agregarLinea(tipo, itemId, cantidad);
       avisoExito(esServicio ? "Servicio agregado" : "Repuesto agregado");
       onCerrar();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "No se pudo agregar.");
+    } catch (err) {
+      setError(mensajeDeError(err));
       setGuardando(false);
     }
   }

@@ -1,12 +1,9 @@
 import { useMemo } from "react";
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import { useClienteContext } from "../ClienteContext/ClienteContext";
 import Buscador from "../Buscador/Buscador";
+import EstadoListado from "../EstadoListado/EstadoListado";
 import Cliente from "../Cliente/Cliente";
 import AgregarEditarCliente from "../AgregarEditarCliente/AgregarEditarCliente";
 import ModalEquiposCliente from "../ModalEquiposCliente/ModalEquiposCliente";
@@ -39,12 +36,8 @@ export default function ClientesList() {
     );
   }, [clientes, busqueda]);
 
-  function abrirAlta() {
-    setClienteSeleccionado(null);
-    setOpenModal(true);
-  }
-
-  function abrirEdicion(cliente: (typeof clientes)[number]) {
+  // null = alta, con cliente = edición
+  function abrirModal(cliente: (typeof clientes)[number] | null) {
     setClienteSeleccionado(cliente);
     setOpenModal(true);
   }
@@ -58,58 +51,26 @@ export default function ClientesList() {
           placeholder="Buscar por nombre, email o teléfono…"
         />
 
-        <Button variant="contained" onClick={abrirAlta}>
+        <Button variant="contained" onClick={() => abrirModal(null)}>
           + Nuevo cliente
         </Button>
       </div>
 
-      {error && clientes.length > 0 && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => obtenerClientes()}
-            >
-              Reintentar
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
-      )}
-
-      {cargando && clientes.length === 0 && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {!cargando && error && clientes.length === 0 && (
-        <Stack spacing={2} sx={{ alignItems: "center", py: 5 }}>
-          <Alert severity="error">{error}</Alert>
-          <Button variant="outlined" onClick={() => obtenerClientes()}>
-            Reintentar
-          </Button>
-        </Stack>
-      )}
-
-      {!cargando && !error && clientesVisibles.length === 0 && (
-        <Typography color="text.secondary" align="center" sx={{ py: 5 }}>
-          {busqueda
-            ? "Ningún cliente coincide con la búsqueda."
-            : "Todavía no hay clientes cargados."}
-        </Typography>
-      )}
+      <EstadoListado
+        cargando={cargando}
+        error={error}
+        total={clientes.length}
+        visibles={clientesVisibles.length}
+        mensajeVacio={busqueda ? "Ningún cliente coincide con la búsqueda." : "Todavía no hay clientes cargados."}
+        onReintentar={() => obtenerClientes()}
+      />
 
       <Box className="grilla">
         {clientesVisibles.map((cliente) => (
           <Cliente
             key={cliente.id}
             cliente={cliente}
-            onEditar={() => abrirEdicion(cliente)}
+            onEditar={() => abrirModal(cliente)}
             onVerEquipos={() => setClienteEquipos(cliente)}
           />
         ))}

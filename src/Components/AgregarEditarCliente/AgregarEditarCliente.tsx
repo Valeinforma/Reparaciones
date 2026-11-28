@@ -7,6 +7,7 @@ import Modal from "../Modal/Modal";
 import { useClienteContext } from "../ClienteContext/ClienteContext";
 import type ICliente from "../../Interfaces/ICliente";
 import { avisoExito } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 interface AgregarEditarClienteProps {
   inicial: ICliente | null; // null = alta
@@ -63,8 +64,8 @@ export default function AgregarEditarCliente({
         avisoExito("Cliente creado");
       }
       onCerrar();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar.");
+    } catch (err) {
+      setError(mensajeDeError(err));
       setGuardando(false);
     }
   }

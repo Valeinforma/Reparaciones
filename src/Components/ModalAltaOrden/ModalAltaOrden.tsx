@@ -8,13 +8,11 @@ import TextField from "@mui/material/TextField";
 import Modal from "../Modal/Modal";
 import { useOrdenContext } from "../OrdenContext/OrdenContext";
 import { useClienteContext } from "../ClienteContext/ClienteContext";
-import { useSesion, headersSesion, leerError } from "../../Hooks/useSesion";
+import { useSesion } from "../../Hooks/useSesion";
 import type { IEquipo } from "../../Hooks/useEquiposApi";
-import {
-  describirEquipo,
-  type IOrdenInput,
-} from "../../Hooks/useOrdenesApi";
+import { describirEquipo, type IOrdenInput } from "../../Hooks/useOrdenesApi";
 import { avisoExito } from "../../utils/dialogos";
+import { pedirApi, mensajeDeError } from "../../utils/api";
 
 interface ModalAltaOrdenProps {
   onCerrar: () => void;
@@ -48,34 +46,13 @@ export default function ModalAltaOrden({ onCerrar }: ModalAltaOrdenProps) {
       return;
     }
 
+    // "vivo" evita guardar la respuesta si el cliente cambió antes de que llegue
     let vivo = true;
     setCargandoEquipos(true);
-
-    async function cargarEquipos() {
-      try {
-        const respuesta = await fetch(`/api/equipos?clienteId=${clienteId}`, {
-          headers: headersSesion(),
-        });
-
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al obtener los equipos");
-        }
-
-        const datos: IEquipo[] = await respuesta.json();
-
-        if (vivo) setEquipos(datos);
-      } catch (err: unknown) {
-        if (vivo) {
-          setErrorEquipos(
-            err instanceof Error ? err.message : "Ocurrió un error desconocido",
-          );
-        }
-      } finally {
-        if (vivo) setCargandoEquipos(false);
-      }
-    }
-
-    cargarEquipos();
+    pedirApi<IEquipo[]>(`/api/equipos?clienteId=${clienteId}`, "Error al obtener los equipos")
+      .then((datos) => vivo && setEquipos(datos))
+      .catch((err) => vivo && setErrorEquipos(mensajeDeError(err)))
+      .finally(() => vivo && setCargandoEquipos(false));
 
     return () => {
       vivo = false;
@@ -120,8 +97,8 @@ export default function ModalAltaOrden({ onCerrar }: ModalAltaOrdenProps) {
 
       // Directo al detalle de la orden recién creada
       if (nueva) navigate(`/ordenes/${nueva.id}`);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar.");
+    } catch (err) {
+      setError(mensajeDeError(err));
       setGuardando(false);
     }
   }

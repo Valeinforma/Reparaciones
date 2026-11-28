@@ -11,6 +11,7 @@ import {
   type EstadoOrden,
 } from "../../Hooks/useOrdenesApi";
 import { avisoExito } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 interface ModalCambioEstadoProps {
   destino: EstadoOrden;
@@ -46,10 +47,8 @@ export default function ModalCambioEstado({
       await cambiarEstado(destino, nota);
       avisoExito(`Orden en estado ${ETIQUETAS_ESTADO[destino]}`);
       onCerrar();
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "No se pudo cambiar el estado.",
-      );
+    } catch (err) {
+      setError(mensajeDeError(err));
       setGuardando(false);
     }
   }

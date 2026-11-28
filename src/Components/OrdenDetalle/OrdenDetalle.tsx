@@ -25,15 +25,15 @@ import {
   formatearFecha,
   formatearFechaHora,
   formatearMoneda,
-  transicionesDesde,
+  TRANSICIONES,
 } from "../../Hooks/useOrdenesApi";
 import type { TipoLinea } from "../../Hooks/useOrdenDetalleApi";
 import {
   avisoError,
   avisoExito,
-  confirmarEliminacion,
-  confirmarQuitar,
+  confirmar,
 } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 // Una línea de servicio o repuesto, ya normalizada para la vista.
 interface LineaVista {
@@ -166,8 +166,7 @@ export default function OrdenDetalle() {
 
   // El rol Recepcion no tiene acceso a /api/repuestos
   const ocultarRepuestos = sinPermisoRepuestos || sesion?.rol === "Recepcion";
-  const transiciones = transicionesDesde(orden.estado);
-  const numeroOrden = orden.numeroOrden;
+  const transiciones = TRANSICIONES[orden.estado];
 
   // Se muestran solo las notas con contenido
   const notas = [
@@ -188,66 +187,46 @@ export default function OrdenDetalle() {
     orden.equipoNumeroSerie ? `S/N ${orden.equipoNumeroSerie}` : "",
   ].filter(Boolean);
 
-  const servicios: LineaVista[] = orden.detallesServicios.map((detalle) => ({
-    id: detalle.id,
-    nombre: detalle.servicioNombre,
-    cantidad: detalle.cantidad,
-    precio: detalle.precio,
-    subtotal: detalle.subtotal,
-  }));
+  const servicios: LineaVista[] = orden.detallesServicios.map((d) => ({ ...d, nombre: d.servicioNombre }));
+  const repuestos: LineaVista[] = orden.detallesRepuestos.map((d) => ({ ...d, nombre: d.repuestoNombre }));
 
-  const repuestos: LineaVista[] = orden.detallesRepuestos.map((detalle) => ({
-    id: detalle.id,
-    nombre: detalle.repuestoNombre,
-    cantidad: detalle.cantidad,
-    precio: detalle.precio,
-    subtotal: detalle.subtotal,
-  }));
-
-  async function pedirQuitar(
-    tipo: TipoLinea,
-    detalleId: number,
-    nombre: string,
+  // Confirma, ejecuta la acción y muestra el resultado (o el error).
+  async function confirmarYEjecutar(
+    texto: string,
+    textoBoton: string,
+    accion: () => Promise<void>,
+    exito: string,
   ) {
-    const confirmado = await confirmarQuitar(
+    if (!(await confirmar(texto, textoBoton))) return;
+    setErrorAccion(null);
+    try {
+      await accion();
+      avisoExito(exito);
+    } catch (err) {
+      const mensaje = mensajeDeError(err);
+      setErrorAccion(mensaje);
+      avisoError(mensaje);
+    }
+  }
+
+  const pedirQuitar = (tipo: TipoLinea, detalleId: number, nombre: string) =>
+    confirmarYEjecutar(
       `¿Quitar "${nombre}" de la orden? El total se recalcula automáticamente.`,
+      "Sí, quitarlo",
+      () => quitarLinea(tipo, detalleId),
+      "Línea quitada",
     );
 
-    if (!confirmado) return;
-
-    setErrorAccion(null);
-
-    try {
-      await quitarLinea(tipo, detalleId);
-      avisoExito("Línea quitada");
-    } catch (err: unknown) {
-      const mensaje =
-        err instanceof Error ? err.message : "No se pudo quitar la línea.";
-      setErrorAccion(mensaje);
-      avisoError(mensaje);
-    }
-  }
-
-  async function pedirEliminar() {
-    const confirmado = await confirmarEliminacion(
-      `¿Eliminar la orden ${numeroOrden}? Se restaurará el stock de los repuestos usados y no se puede deshacer.`,
+  const pedirEliminar = () =>
+    confirmarYEjecutar(
+      `¿Eliminar la orden ${orden.numeroOrden}? Se restaurará el stock de los repuestos usados y no se puede deshacer.`,
+      "Sí, eliminarlo",
+      async () => {
+        await eliminarOrden();
+        navigate("/ordenes", { replace: true });
+      },
+      "Orden eliminada",
     );
-
-    if (!confirmado) return;
-
-    setErrorAccion(null);
-
-    try {
-      await eliminarOrden();
-      avisoExito("Orden eliminada");
-      navigate("/ordenes", { replace: true });
-    } catch (err: unknown) {
-      const mensaje =
-        err instanceof Error ? err.message : "No se pudo eliminar la orden.";
-      setErrorAccion(mensaje);
-      avisoError(mensaje);
-    }
-  }
 
   return (
     <section>
@@ -274,11 +253,7 @@ export default function OrdenDetalle() {
 
           <Typography sx={{ mt: 0.5 }}>
             {orden.clienteNombre} ·{" "}
-            {describirEquipo(
-              orden.equipoTipo,
-              orden.equipoMarca,
-              orden.equipoModelo,
-            )}
+            {describirEquipo(orden.equipoTipo, orden.equipoMarca, orden.equipoModelo)}
           </Typography>
 
           <Typography variant="body2" color="text.secondary">
@@ -297,11 +272,7 @@ export default function OrdenDetalle() {
       </Box>
 
       {errorAccion && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          onClose={() => setErrorAccion(null)}
-        >
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setErrorAccion(null)}>
           {errorAccion}
         </Alert>
       )}

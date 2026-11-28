@@ -1,6 +1,4 @@
-
 import { useSyncExternalStore } from "react";
-
 
 export interface ISesion {
   id: number;
@@ -10,7 +8,6 @@ export interface ISesion {
 }
 
 const CLAVE_SESION = "techfix_sesion";
-
 
 let cacheSesion: ISesion | null | undefined;
 
@@ -33,7 +30,6 @@ export function borrarSesion(): void {
   window.dispatchEvent(new Event(CLAVE_SESION));
 }
 
-
 export function headersSesion(): Record<string, string> {
   const sesion = obtenerSesion();
   return sesion ? { "X-Usuario-Id": String(sesion.id) } : {};
@@ -55,7 +51,6 @@ export async function leerError(
 
   return new Error(mensajePorDefecto);
 }
-
 
 export async function iniciarSesion(email: string, password: string): Promise<ISesion> {
   let respuesta: Response;
@@ -92,10 +87,9 @@ export async function iniciarSesion(email: string, password: string): Promise<IS
   return datos as ISesion;
 }
 
-
 function suscribir(alCambiar: () => void) {
   const oyente = () => {
-    cacheSesion = undefined; 
+    cacheSesion = undefined;
     alCambiar();
   };
 
@@ -109,6 +103,5 @@ function suscribir(alCambiar: () => void) {
 }
 
 export function useSesion(): ISesion | null {
-
   return useSyncExternalStore(suscribir, obtenerSesion, () => null);
 }

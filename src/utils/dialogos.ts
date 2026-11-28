@@ -17,23 +17,11 @@ const BASE_CONFIRMAR: SweetAlertOptions = {
   ...ESTILO_OSCURO,
 };
 
-export async function confirmarEliminacion(texto: string): Promise<boolean> {
-  const resultado = await Swal.fire({
-    ...BASE_CONFIRMAR,
-    text: texto,
-    confirmButtonText: "Sí, eliminarlo",
-  });
-
-  return resultado.isConfirmed;
-}
-
-export async function confirmarQuitar(texto: string): Promise<boolean> {
-  const resultado = await Swal.fire({
-    ...BASE_CONFIRMAR,
-    text: texto,
-    confirmButtonText: "Sí, quitarlo",
-  });
-
+export async function confirmar(
+  texto: string,
+  textoBoton = "Sí, eliminarlo",
+): Promise<boolean> {
+  const resultado = await Swal.fire({ ...BASE_CONFIRMAR, text: texto, confirmButtonText: textoBoton });
   return resultado.isConfirmed;
 }
 

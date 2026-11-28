@@ -9,6 +9,7 @@ import { useEquipoContext } from "../EquipoContext/EquipoContext";
 import { useClienteContext } from "../ClienteContext/ClienteContext";
 import type { IEquipo, IEquipoInput } from "../../Hooks/useEquiposApi";
 import { avisoExito } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 interface AgregarEditarEquipoProps {
   inicial: IEquipo | null; // null = alta
@@ -62,8 +63,8 @@ export default function AgregarEditarEquipo({
         avisoExito("Equipo creado");
       }
       onCerrar();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar.");
+    } catch (err) {
+      setError(mensajeDeError(err));
       setGuardando(false);
     }
   }

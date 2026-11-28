@@ -10,8 +10,9 @@ import { useClienteContext } from "../ClienteContext/ClienteContext";
 import {
   avisoError,
   avisoExito,
-  confirmarEliminacion,
+  confirmar,
 } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 interface ClienteProps {
   cliente: ICliente;
@@ -27,7 +28,7 @@ export default function Cliente({
   const { eliminarCliente } = useClienteContext();
 
   async function onEliminar() {
-    const confirmado = await confirmarEliminacion(
+    const confirmado = await confirmar(
       `¿Eliminar a ${cliente.nombre} ${cliente.apellido}? Esta acción no se puede deshacer.`,
     );
 
@@ -36,10 +37,8 @@ export default function Cliente({
     try {
       await eliminarCliente(cliente.id);
       avisoExito("Cliente eliminado");
-    } catch (err: unknown) {
-      avisoError(
-        err instanceof Error ? err.message : "No se pudo eliminar el cliente.",
-      );
+    } catch (err) {
+      avisoError(mensajeDeError(err));
     }
   }
 

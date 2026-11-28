@@ -7,6 +7,7 @@ import Modal from "../Modal/Modal";
 import { useOrdenDetalleContext } from "../OrdenDetalleContext/OrdenDetalleContext";
 import { paraInputFecha } from "../../Hooks/useOrdenesApi";
 import { avisoExito } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 export default function ModalEditarOrden({
   onCerrar,
@@ -54,8 +55,8 @@ export default function ModalEditarOrden({
       });
       avisoExito("Orden actualizada");
       onCerrar();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar.");
+    } catch (err) {
+      setError(mensajeDeError(err));
       setGuardando(false);
     }
   }

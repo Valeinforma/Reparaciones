@@ -17,8 +17,9 @@ import {
 import {
   avisoError,
   avisoExito,
-  confirmarEliminacion,
+  confirmar,
 } from "../../utils/dialogos";
+import { mensajeDeError } from "../../utils/api";
 
 interface OrdenProps {
   orden: IOrden;
@@ -28,7 +29,7 @@ export default function Orden({ orden }: OrdenProps) {
   const { eliminarOrden } = useOrdenContext();
 
   async function onEliminar() {
-    const confirmado = await confirmarEliminacion(
+    const confirmado = await confirmar(
       `¿Eliminar la orden ${orden.numeroOrden}? Se restaurará el stock de los repuestos usados y no se puede deshacer.`,
     );
 
@@ -37,10 +38,8 @@ export default function Orden({ orden }: OrdenProps) {
     try {
       await eliminarOrden(orden.id);
       avisoExito("Orden eliminada");
-    } catch (err: unknown) {
-      avisoError(
-        err instanceof Error ? err.message : "No se pudo eliminar la orden.",
-      );
+    } catch (err) {
+      avisoError(mensajeDeError(err));
     }
   }
 

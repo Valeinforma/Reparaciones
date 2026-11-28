@@ -7,11 +7,9 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Modal from "../Modal/Modal";
 import EstadoBadge from "../EstadoBadge/EstadoBadge";
-import { headersSesion, leerError } from "../../Hooks/useSesion";
 import type ICliente from "../../Interfaces/ICliente";
 import type { IEquipo } from "../../Hooks/useEquiposApi";
-
-const URL_BASE = "/api/equipos";
+import { pedirApi, mensajeDeError } from "../../utils/api";
 
 interface ModalEquiposClienteProps {
   cliente: ICliente;
@@ -27,30 +25,9 @@ export default function ModalEquiposCliente({
 
   useEffect(() => {
     let vivo = true;
-
-    async function cargar() {
-      try {
-        const respuesta = await fetch(`${URL_BASE}?clienteId=${cliente.id}`, {
-          headers: headersSesion(),
-        });
-
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al obtener los equipos");
-        }
-
-        const datos: IEquipo[] = await respuesta.json();
-
-        if (vivo) setEquipos(datos);
-      } catch (err: unknown) {
-        if (vivo) {
-          setError(
-            err instanceof Error ? err.message : "Ocurrió un error desconocido",
-          );
-        }
-      }
-    }
-
-    cargar();
+    pedirApi<IEquipo[]>(`/api/equipos?clienteId=${cliente.id}`, "Error al obtener los equipos")
+      .then((datos) => vivo && setEquipos(datos))
+      .catch((err) => vivo && setError(mensajeDeError(err)));
 
     return () => {
       vivo = false;

@@ -1,13 +1,10 @@
 import { useMemo } from "react";
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import { useOrdenContext } from "../OrdenContext/OrdenContext";
 import type { EstadoOrden } from "../../Hooks/useOrdenesApi";
 import Buscador from "../Buscador/Buscador";
+import EstadoListado from "../EstadoListado/EstadoListado";
 import ChipsEstado from "../ChipsEstado/ChipsEstado";
 import Orden from "../Orden/Orden";
 import ModalAltaOrden from "../ModalAltaOrden/ModalAltaOrden";
@@ -89,46 +86,14 @@ export default function OrdenesList() {
         total={ordenes.length}
       />
 
-      {error && ordenes.length > 0 && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => obtenerOrdenes()}
-            >
-              Reintentar
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
-      )}
-
-      {cargando && ordenes.length === 0 && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {!cargando && error && ordenes.length === 0 && (
-        <Stack spacing={2} sx={{ alignItems: "center", py: 5 }}>
-          <Alert severity="error">{error}</Alert>
-          <Button variant="outlined" onClick={() => obtenerOrdenes()}>
-            Reintentar
-          </Button>
-        </Stack>
-      )}
-
-      {!cargando && !error && ordenesVisibles.length === 0 && (
-        <Typography color="text.secondary" align="center" sx={{ py: 5 }}>
-          {busqueda || filtro !== "Todos"
-            ? "Ninguna orden coincide con el filtro."
-            : "Todavía no hay órdenes cargadas."}
-        </Typography>
-      )}
+      <EstadoListado
+        cargando={cargando}
+        error={error}
+        total={ordenes.length}
+        visibles={ordenesVisibles.length}
+        mensajeVacio={busqueda || filtro !== "Todos" ? "Ninguna orden coincide con el filtro." : "Todavía no hay órdenes cargadas."}
+        onReintentar={() => obtenerOrdenes()}
+      />
 
       <Box className="grilla">
         {ordenesVisibles.map((orden) => (

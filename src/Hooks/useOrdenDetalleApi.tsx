@@ -9,222 +9,134 @@ import type {
   IRepuesto,
   IServicio,
 } from "./useOrdenesApi";
-import { headersSesion, leerError } from "./useSesion";
+import { headersSesion } from "./useSesion";
+import { pedirApi, mensajeDeError } from "../utils/api";
 
 const URL_BASE = "/api/ordenes";
 
 export type TipoLinea = "servicio" | "repuesto";
+
+interface LineaEnvio {
+  itemId: number;
+  cantidad: number;
+}
+
+// Si se manda un array de líneas, el backend REEMPLAZA los dos:
+// por eso siempre se reenvían servicios y repuestos completos
+// (opcionalmente sin la línea que se quiere quitar).
+function lineasParaEnviar(orden: IOrden, quitar?: { tipo: TipoLinea; detalleId: number }) {
+  const seQueda = (tipo: TipoLinea, id: number) =>
+    !(quitar && quitar.tipo === tipo && quitar.detalleId === id);
+  return {
+    detallesServicios: orden.detallesServicios
+      .filter((d) => seQueda("servicio", d.id))
+      .map((d): LineaEnvio => ({ itemId: d.servicioId, cantidad: d.cantidad })),
+    detallesRepuestos: orden.detallesRepuestos
+      .filter((d) => seQueda("repuesto", d.id))
+      .map((d): LineaEnvio => ({ itemId: d.repuestoId, cantidad: d.cantidad })),
+  };
+}
+
+function aCuerpo(lineas: ReturnType<typeof lineasParaEnviar>): IOrdenUpdateInput {
+  return {
+    detallesServicios: lineas.detallesServicios.map((l) => ({ servicioId: l.itemId, cantidad: l.cantidad })),
+    detallesRepuestos: lineas.detallesRepuestos.map((l) => ({ repuestoId: l.itemId, cantidad: l.cantidad })),
+  };
+}
 
 export default function useOrdenDetalleApi(id: number) {
   const [orden, setOrden] = useState<IOrden | null>(null);
   const [servicios, setServicios] = useState<IServicio[]>([]);
   const [repuestos, setRepuestos] = useState<IRepuesto[]>([]);
   const [sinPermisoRepuestos, setSinPermisoRepuestos] = useState(false);
-
-  const [cargando, setCargando] = useState<boolean>(true);
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Estado de UI (modales) ---
+  // Estado de UI (modales)
   const [openEditar, setOpenEditar] = useState(false);
   const [estadoDestino, setEstadoDestino] = useState<EstadoOrden | null>(null);
   const [lineaNueva, setLineaNueva] = useState<TipoLinea | null>(null);
 
   // GET /api/ordenes/{id}
-  const cargarOrden = useCallback(async (): Promise<IOrden | undefined> => {
+  const cargarOrden = useCallback(async () => {
     setCargando(true);
     setError(null);
-
     try {
-      const respuesta = await fetch(`${URL_BASE}/${id}`, {
-        headers: headersSesion(),
-      });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al obtener la orden");
-      }
-
-      const datos: IOrden = await respuesta.json();
-      setOrden(datos);
-      return datos;
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Ocurrió un error desconocido",
-      );
+      setOrden(await pedirApi<IOrden>(`${URL_BASE}/${id}`, "Error al obtener la orden"));
+    } catch (err) {
+      setError(mensajeDeError(err));
     } finally {
       setCargando(false);
     }
   }, [id]);
 
-  // Catálogos para los modales de líneas
+  // Catálogos para el modal de líneas. Si fallan, el modal queda vacío.
+  // El rol Recepcion recibe 403 en repuestos.
   const cargarCatalogos = useCallback(async () => {
-    try {
-      const respuesta = await fetch("/api/servicios?soloActivos=true", {
-        headers: headersSesion(),
-      });
-
-      if (respuesta.ok) {
-        const datos: IServicio[] = await respuesta.json();
-        setServicios(datos);
-      }
-    } catch {
-      // Sin catálogo de servicios el modal muestra "no hay datos"
-    }
-
-    try {
-      const respuesta = await fetch("/api/repuestos?soloActivos=true", {
-        headers: headersSesion(),
-      });
-
-      if (respuesta.ok) {
-        const datos: IRepuesto[] = await respuesta.json();
-        setRepuestos(datos);
-      } else if (respuesta.status === 403) {
-        // El rol Recepcion no tiene acceso al módulo de repuestos
-        setSinPermisoRepuestos(true);
-      }
-    } catch {
-      // Igual que arriba: el panel queda vacío
-    }
+    const opciones = { headers: headersSesion() };
+    const [resServicios, resRepuestos] = await Promise.all([
+      fetch("/api/servicios?soloActivos=true", opciones).catch(() => null),
+      fetch("/api/repuestos?soloActivos=true", opciones).catch(() => null),
+    ]);
+    if (resServicios?.ok) setServicios(await resServicios.json());
+    if (resRepuestos?.ok) setRepuestos(await resRepuestos.json());
+    else if (resRepuestos?.status === 403) setSinPermisoRepuestos(true);
   }, []);
 
-  // PUT genérico (textos o líneas) + recarga para reflejar costos
-  const enviarCambios = useCallback(
-    async (cuerpo: IOrdenUpdateInput): Promise<void> => {
-      const respuesta = await fetch(`${URL_BASE}/${id}`, {
+  // PUT /api/ordenes/{id} y recarga para ver los costos actualizados.
+  // Para editar textos se mandan sin arrays: así el backend no toca las líneas.
+  const editarOrden = useCallback(
+    async (cuerpo: IOrdenUpdateInput) => {
+      await pedirApi(`${URL_BASE}/${id}`, "Error al actualizar la orden", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...headersSesion() },
-        body: JSON.stringify(cuerpo),
+        body: cuerpo,
       });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al actualizar la orden");
-      }
-
       await cargarOrden();
     },
     [id, cargarOrden],
   );
 
-  // Editar solo los textos: NO se envían los arrays de detalles,
-  // así el backend no toca las líneas ni el stock.
-  const editarOrden = useCallback(
-    async (datos: IOrdenUpdateInput): Promise<void> => {
-      await enviarCambios(datos);
-    },
-    [enviarCambios],
-  );
-
-  // PUT /api/ordenes/{id}/estado
   // La nota va en el campo que corresponde al estado destino.
   const cambiarEstado = useCallback(
-    async (estado: EstadoOrden, nota: string): Promise<void> => {
+    async (estado: EstadoOrden, nota: string) => {
       const texto = nota.trim() || null;
-
       const cuerpo: IOrdenEstadoInput = { estado };
+      if (estado === "EnDiagnostico") cuerpo.diagnostico = texto;
+      else if (estado === "Listo") cuerpo.solucion = texto;
+      else cuerpo.observaciones = texto;
 
-      if (estado === "EnDiagnostico") {
-        cuerpo.diagnostico = texto;
-      } else if (estado === "Listo") {
-        cuerpo.solucion = texto;
-      } else {
-        cuerpo.observaciones = texto;
-      }
-
-      const respuesta = await fetch(`${URL_BASE}/${id}/estado`, {
+      await pedirApi(`${URL_BASE}/${id}/estado`, "Error al cambiar el estado", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...headersSesion() },
-        body: JSON.stringify(cuerpo),
+        body: cuerpo,
       });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al cambiar el estado");
-      }
-
       await cargarOrden();
     },
     [id, cargarOrden],
   );
 
-  // Agregar línea: se reconstruyen los DOS arrays completos
   const agregarLinea = useCallback(
-    async (tipo: TipoLinea, itemId: number, cantidad: number): Promise<void> => {
+    async (tipo: TipoLinea, itemId: number, cantidad: number) => {
       if (!orden) return;
-
-      const lineasServicios = orden.detallesServicios.map((detalle) => ({
-        servicioId: detalle.servicioId,
-        cantidad: detalle.cantidad,
-      }));
-
-      const lineasRepuestos = orden.detallesRepuestos.map((detalle) => ({
-        repuestoId: detalle.repuestoId,
-        cantidad: detalle.cantidad,
-      }));
-
-      if (tipo === "servicio") {
-        const existente = lineasServicios.find(
-          (linea) => linea.servicioId === itemId,
-        );
-
-        if (existente) existente.cantidad += cantidad;
-        else lineasServicios.push({ servicioId: itemId, cantidad });
-      } else {
-        const existente = lineasRepuestos.find(
-          (linea) => linea.repuestoId === itemId,
-        );
-
-        if (existente) existente.cantidad += cantidad;
-        else lineasRepuestos.push({ repuestoId: itemId, cantidad });
-      }
-
-      await enviarCambios({
-        detallesServicios: lineasServicios,
-        detallesRepuestos: lineasRepuestos,
-      });
+      const lineas = lineasParaEnviar(orden);
+      const lista = tipo === "servicio" ? lineas.detallesServicios : lineas.detallesRepuestos;
+      const existente = lista.find((l) => l.itemId === itemId);
+      if (existente) existente.cantidad += cantidad;
+      else lista.push({ itemId, cantidad });
+      await editarOrden(aCuerpo(lineas));
     },
-    [orden, enviarCambios],
+    [orden, editarOrden],
   );
 
-  // Quitar línea: idem, se reenvían los dos arrays sin esa línea
   const quitarLinea = useCallback(
-    async (tipo: TipoLinea, detalleId: number): Promise<void> => {
+    async (tipo: TipoLinea, detalleId: number) => {
       if (!orden) return;
-
-      const lineasServicios = orden.detallesServicios
-        .filter(
-          (detalle) => !(tipo === "servicio" && detalle.id === detalleId),
-        )
-        .map((detalle) => ({
-          servicioId: detalle.servicioId,
-          cantidad: detalle.cantidad,
-        }));
-
-      const lineasRepuestos = orden.detallesRepuestos
-        .filter(
-          (detalle) => !(tipo === "repuesto" && detalle.id === detalleId),
-        )
-        .map((detalle) => ({
-          repuestoId: detalle.repuestoId,
-          cantidad: detalle.cantidad,
-        }));
-
-      await enviarCambios({
-        detallesServicios: lineasServicios,
-        detallesRepuestos: lineasRepuestos,
-      });
+      await editarOrden(aCuerpo(lineasParaEnviar(orden, { tipo, detalleId })));
     },
-    [orden, enviarCambios],
+    [orden, editarOrden],
   );
 
-  // DELETE /api/ordenes/{id}
-  const eliminarOrden = useCallback(async (): Promise<void> => {
-    const respuesta = await fetch(`${URL_BASE}/${id}`, {
-      method: "DELETE",
-      headers: headersSesion(),
-    });
-
-    if (!respuesta.ok) {
-      throw await leerError(respuesta, "Error al eliminar la orden");
-    }
+  const eliminarOrden = useCallback(async () => {
+    await pedirApi(`${URL_BASE}/${id}`, "Error al eliminar la orden", { method: "DELETE" });
   }, [id]);
 
   useEffect(() => {

@@ -1,143 +1,70 @@
-
 import { useState, useEffect, useCallback } from "react";
 import type ICliente from "../Interfaces/ICliente";
-import { headersSesion, leerError } from "./useSesion";
+import { pedirApi } from "../utils/api";
+import useCarga from "./useCarga";
 
 const URL_BASE = "/api/clientes";
 
+type IClienteInput = Omit<ICliente, "id" | "fechaAlta" | "totalEquipos">;
+
 export default function useClientesApi() {
   const [clientes, setClientes] = useState<ICliente[]>([]);
-  const [cargando, setCargando] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const { cargando, error, ejecutar } = useCarga();
 
-  // --- Estado de UI (búsqueda y modales) ---
+  // Estado de UI (búsqueda y modales)
   const [busqueda, setBusqueda] = useState("");
   const [openModal, setOpenModal] = useState(false);
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<ICliente | null>(
-    null,
-  );
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<ICliente | null>(null);
   const [clienteEquipos, setClienteEquipos] = useState<ICliente | null>(null);
 
-  // GET /api/clientes
-  const obtenerClientes = useCallback(async (): Promise<
-    ICliente[] | undefined
-  > => {
-    setCargando(true);
-    setError(null);
-
-    try {
-      const respuesta = await fetch(URL_BASE, { headers: headersSesion() });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al obtener los clientes");
-      }
-
-      const datos: ICliente[] = await respuesta.json();
-      setClientes(datos);
-      return datos;
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Ocurrió un error desconocido",
-      );
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  // POST /api/clientes
-  const agregarCliente = useCallback(
-    async (
-      cliente: Omit<ICliente, "id" | "fechaAlta" | "totalEquipos">,
-    ): Promise<ICliente | undefined> => {
-      setCargando(true);
-      setError(null);
-
-      try {
-        const respuesta = await fetch(URL_BASE, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...headersSesion() },
-          body: JSON.stringify(cliente),
-        });
-
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al crear el cliente");
-        }
-
-        const nuevo: ICliente = await respuesta.json();
-        setClientes((actuales) => [...actuales, nuevo]);
-        return nuevo;
-      } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "Ocurrió un error desconocido",
-        );
-        // Re-lanzamos para que el modal muestre el error y siga abierto
-        throw err;
-      } finally {
-        setCargando(false);
-      }
-    },
-    [],
+  const obtenerClientes = useCallback(
+    () =>
+      ejecutar(async () => {
+        const datos = await pedirApi<ICliente[]>(URL_BASE, "Error al obtener los clientes");
+        setClientes(datos);
+        return datos;
+      }).catch(() => undefined),
+    [ejecutar],
   );
 
-  // PUT /api/clientes/{id} → el backend responde { mensaje },
-  // así que actualizamos la lista con los datos del formulario
-  // conservando totalEquipos.
-  const editarCliente = useCallback(
-    async (id: number, cliente: Partial<ICliente>): Promise<void> => {
-      setCargando(true);
-      setError(null);
-
-      try {
-        const respuesta = await fetch(`${URL_BASE}/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", ...headersSesion() },
-          body: JSON.stringify(cliente),
+  const agregarCliente = useCallback(
+    (cliente: IClienteInput) =>
+      ejecutar(async () => {
+        const nuevo = await pedirApi<ICliente>(URL_BASE, "Error al crear el cliente", {
+          method: "POST",
+          body: cliente,
         });
+        setClientes((actuales) => [...actuales, nuevo]);
+        return nuevo;
+      }),
+    [ejecutar],
+  );
 
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al actualizar el cliente");
-        }
-
+  // El PUT responde { mensaje }: actualizamos la lista con los datos del form.
+  const editarCliente = useCallback(
+    (id: number, cliente: Partial<ICliente>) =>
+      ejecutar(async () => {
+        await pedirApi(`${URL_BASE}/${id}`, "Error al actualizar el cliente", {
+          method: "PUT",
+          body: cliente,
+        });
         setClientes((actuales) =>
           actuales.map((c) => (c.id === id ? { ...c, ...cliente } : c)),
         );
-      } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "Ocurrió un error desconocido",
-        );
-        throw err;
-      } finally {
-        setCargando(false);
-      }
-    },
-    [],
+      }),
+    [ejecutar],
   );
 
-  // DELETE /api/clientes/{id}
-  const eliminarCliente = useCallback(async (id: number): Promise<void> => {
-    setCargando(true);
-    setError(null);
-
-    try {
-      const respuesta = await fetch(`${URL_BASE}/${id}`, {
-        method: "DELETE",
-        headers: headersSesion(),
-      });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al eliminar el cliente");
-      }
-
-      setClientes((actuales) => actuales.filter((c) => c.id !== id));
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Ocurrió un error desconocido",
-      );
-      throw err;
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+  const eliminarCliente = useCallback(
+    (id: number) =>
+      ejecutar(async () => {
+        await pedirApi(`${URL_BASE}/${id}`, "Error al eliminar el cliente", {
+          method: "DELETE",
+        });
+        setClientes((actuales) => actuales.filter((c) => c.id !== id));
+      }),
+    [ejecutar],
+  );
 
   useEffect(() => {
     obtenerClientes();

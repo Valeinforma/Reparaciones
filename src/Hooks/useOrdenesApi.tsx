@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { headersSesion, leerError } from "./useSesion";
+import { pedirApi } from "../utils/api";
+import useCarga from "./useCarga";
 
 export type EstadoOrden =
   | "Recibido"
@@ -12,7 +13,6 @@ export type EstadoOrden =
   | "Cancelado";
 
 export type FiltroEstado = EstadoOrden | "Todos";
-
 
 export const FLUJO_ESTADOS: EstadoOrden[] = [
   "Recibido",
@@ -33,7 +33,6 @@ export const ETIQUETAS_ESTADO: Record<EstadoOrden, string> = {
   Cancelado: "Cancelado",
 };
 
-
 export const TRANSICIONES: Record<EstadoOrden, EstadoOrden[]> = {
   Recibido: ["EnDiagnostico", "Cancelado"],
   EnDiagnostico: ["Presupuestado", "Cancelado"],
@@ -43,10 +42,6 @@ export const TRANSICIONES: Record<EstadoOrden, EstadoOrden[]> = {
   Entregado: [],
   Cancelado: [],
 };
-
-export function transicionesDesde(estado: EstadoOrden): EstadoOrden[] {
-  return TRANSICIONES[estado];
-}
 
 export interface IOrdenDetalle {
   id: number;
@@ -160,17 +155,14 @@ const FORMATO_MONEDA = new Intl.NumberFormat("es-AR", {
   maximumFractionDigits: 2,
 });
 
-export function formatearFecha(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const fecha = new Date(iso);
-  return Number.isNaN(fecha.getTime()) ? "—" : FORMATO_FECHA.format(fecha);
+function formatear(formato: Intl.DateTimeFormat, iso: string | null | undefined): string {
+  const fecha = iso ? new Date(iso) : null;
+  return fecha && !Number.isNaN(fecha.getTime()) ? formato.format(fecha) : "—";
 }
 
-export function formatearFechaHora(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const fecha = new Date(iso);
-  return Number.isNaN(fecha.getTime()) ? "—" : FORMATO_FECHA_HORA.format(fecha);
-}
+export const formatearFecha = (iso: string | null | undefined) => formatear(FORMATO_FECHA, iso);
+export const formatearFechaHora = (iso: string | null | undefined) =>
+  formatear(FORMATO_FECHA_HORA, iso);
 
 export function formatearMoneda(valor: number): string {
   return FORMATO_MONEDA.format(valor);
@@ -193,96 +185,48 @@ const URL_BASE = "/api/ordenes";
 
 export default function useOrdenesApi() {
   const [ordenes, setOrdenes] = useState<IOrden[]>([]);
-  const [cargando, setCargando] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const { cargando, error, ejecutar } = useCarga();
 
-  // --- Estado de UI ---
+  // Estado de UI
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<FiltroEstado>("Todos");
   const [openModal, setOpenModal] = useState(false);
 
-
-  // GET /api/ordenes
-  const obtenerOrdenes = useCallback(async (): Promise<IOrden[] | undefined> => {
-    setCargando(true);
-    setError(null);
-
-    try {
-      const respuesta = await fetch(URL_BASE, { headers: headersSesion() });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al obtener las órdenes");
-      }
-
-      const datos: IOrden[] = await respuesta.json();
-      setOrdenes(datos);
-      return datos;
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Ocurrió un error desconocido",
-      );
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  // POST /api/ordenes → la orden entra en estado Recibido
-  const agregarOrden = useCallback(
-    async (orden: IOrdenInput): Promise<IOrden | undefined> => {
-      setCargando(true);
-      setError(null);
-
-      try {
-        const respuesta = await fetch(URL_BASE, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...headersSesion() },
-          body: JSON.stringify(orden),
-        });
-
-        if (!respuesta.ok) {
-          throw await leerError(respuesta, "Error al crear la orden");
-        }
-
-        const nueva: IOrden = await respuesta.json();
-        setOrdenes((actuales) => [nueva, ...actuales]);
-        return nueva;
-      } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "Ocurrió un error desconocido",
-        );
-        throw err;
-      } finally {
-        setCargando(false);
-      }
-    },
-    [],
+  const obtenerOrdenes = useCallback(
+    () =>
+      ejecutar(async () => {
+        const datos = await pedirApi<IOrden[]>(URL_BASE, "Error al obtener las órdenes");
+        setOrdenes(datos);
+        return datos;
+      }).catch(() => undefined),
+    [ejecutar],
   );
 
-  // DELETE /api/ordenes/{id} → el backend restaura el stock
-  const eliminarOrden = useCallback(async (id: number): Promise<void> => {
-    setCargando(true);
-    setError(null);
+  // La orden nueva entra en estado Recibido.
+  const agregarOrden = useCallback(
+    (orden: IOrdenInput) =>
+      ejecutar(async () => {
+        const nueva = await pedirApi<IOrden>(URL_BASE, "Error al crear la orden", {
+          method: "POST",
+          body: orden,
+        });
+        setOrdenes((actuales) => [nueva, ...actuales]);
+        return nueva;
+      }),
+    [ejecutar],
+  );
 
-    try {
-      const respuesta = await fetch(`${URL_BASE}/${id}`, {
-        method: "DELETE",
-        headers: headersSesion(),
-      });
-
-      if (!respuesta.ok) {
-        throw await leerError(respuesta, "Error al eliminar la orden");
-      }
-
-      setOrdenes((actuales) => actuales.filter((o) => o.id !== id));
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Ocurrió un error desconocido",
-      );
-      throw err;
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+  // Al eliminar, el backend restaura el stock de repuestos.
+  const eliminarOrden = useCallback(
+    (id: number) =>
+      ejecutar(async () => {
+        await pedirApi(`${URL_BASE}/${id}`, "Error al eliminar la orden", {
+          method: "DELETE",
+        });
+        setOrdenes((actuales) => actuales.filter((o) => o.id !== id));
+      }),
+    [ejecutar],
+  );
 
   useEffect(() => {
     obtenerOrdenes();
